@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1112">
+  <title>Forge — крафтеры</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1112;
+      --panel: #111a1b;
+      --panel-2: #151f20;
+      --line: rgba(218, 238, 226, .09);
+      --text: #eef6ef;
+      --muted: #82918b;
+      --green: #b9f36a;
+      --green-2: #87c93d;
+      --amber: #ffc66e;
+      --red: #ff8477;
+      --blue: #8be0c0;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 82% -12%, rgba(99, 154, 72, .13), transparent 36%),
+        radial-gradient(ellipse at 8% 40%, rgba(46, 95, 78, .10), transparent 32%),
+        var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: -.015em;
+    }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    .shell { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: 28px 0 34px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 2px 0 38px; }
+    .topbar-right { display: flex; align-items: center; gap: 18px; }
+    .startup-control { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 11px; background: rgba(18,27,27,.58); }
+    .startup-copy strong { display: block; color: #cbd6ce; font-size: 9px; font-weight: 750; letter-spacing: .02em; }
+    .startup-copy small { display: block; margin-top: 3px; color: #78867f; font-size: 8px; }
+    .startup-control.unavailable { opacity: .7; }
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .brand-mark { width: 37px; height: 37px; display: grid; place-items: center; border: 1px solid rgba(185,243,106,.26); border-radius: 12px; background: rgba(185,243,106,.08); color: var(--green); }
+    .brand-mark svg { width: 21px; height: 21px; }
+    .brand-name { font-size: 13px; font-weight: 800; letter-spacing: .16em; }
+    .brand-sub { margin-top: 2px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .17em; }
+    .clockbox { display: flex; align-items: center; gap: 11px; text-align: right; }
+    .clockbox .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px rgba(185,243,106,.65); }
+    .clock-caption { color: var(--muted); font-size: 9px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+    .clock { margin-top: 3px; font: 600 14px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
+    .hero { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 26px; }
+    .eyebrow { display: flex; gap: 9px; align-items: center; color: var(--green); font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    .eyebrow::before { content: ""; width: 18px; height: 1px; background: var(--green); }
+    h1 { margin: 10px 0 7px; font-size: clamp(30px, 5vw, 43px); line-height: 1.06; letter-spacing: -.055em; font-weight: 690; }
+    .hero-copy { max-width: 540px; margin: 0; color: #8e9d97; font-size: 13px; line-height: 1.65; }
+    .hero-date { padding: 10px 13px; border: 1px solid var(--line); background: rgba(18,27,27,.78); border-radius: 11px; color: #a9b7b0; white-space: nowrap; font-size: 11px; }
+    .hero-date strong { color: var(--text); font-weight: 650; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .stat { position: relative; overflow: hidden; padding: 17px 18px 16px; border: 1px solid var(--line); border-radius: 15px; background: linear-gradient(145deg, rgba(21,31,31,.94), rgba(15,23,23,.9)); }
+    .stat::after { content: ""; position: absolute; top: 0; left: 18px; width: 25px; height: 1px; background: var(--stat-accent, rgba(185,243,106,.6)); }
+    .stat-top { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    .stat-icon { color: var(--stat-accent, var(--green)); opacity: .9; font-size: 15px; }
+    .stat-value { margin-top: 12px; font: 600 27px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -.06em; font-variant-numeric: tabular-nums; }
+    .stat-note { margin-top: 7px; color: #65736d; font-size: 10px; }
+    .stat.warning { --stat-accent: var(--amber); }
+    .stat.warning .stat-value { color: var(--amber); }
+    .stat.license { --stat-accent: var(--blue); }
+
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 15px; }
+    .filters { display: flex; align-items: center; gap: 5px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: rgba(17,26,27,.8); }
+    .filter-btn { border: 0; padding: 8px 12px; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; font-size: 11px; font-weight: 650; transition: .18s ease; }
+    .filter-btn:hover { color: var(--text); }
+    .filter-btn.active { color: var(--text); background: #263230; box-shadow: inset 0 0 0 1px rgba(255,255,255,.035); }
+    .tool-actions { display: flex; gap: 9px; align-items: center; }
+    .search { width: min(225px, 26vw); position: relative; }
+    .search svg { position: absolute; left: 12px; top: 50%; width: 15px; height: 15px; transform: translateY(-50%); color: #77847e; pointer-events: none; }
+    .search input { width: 100%; height: 38px; padding: 0 12px 0 35px; outline: none; border: 1px solid var(--line); border-radius: 10px; background: rgba(17,26,27,.78); color: var(--text); font-size: 11px; transition: border .18s; }
+    .search input::placeholder { color: #697771; }
+    .search input:focus { border-color: rgba(185,243,106,.45); }
+    .add-btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; height: 39px; padding: 0 14px; border: 1px solid rgba(185,243,106,.3); border-radius: 10px; background: var(--green); color: #16200e; font-size: 11px; font-weight: 800; cursor: pointer; box-shadow: 0 5px 20px rgba(139,201,61,.09); transition: .18s ease; white-space: nowrap; }
+    .add-btn:hover { background: #cbff82; transform: translateY(-1px); }
+    .add-btn svg { width: 15px; height: 15px; }
+    .list-meta { display: flex; justify-content: space-between; align-items: center; margin: 19px 1px 11px; color: #74817b; font-size: 10px; letter-spacing: .04em; }
+    .list-meta strong { color: #bdc9c2; font-weight: 650; }
+    .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+    .card { position: relative; min-width: 0; padding: 17px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(145deg, rgba(20,30,30,.97), rgba(15,22,23,.96)); box-shadow: 0 9px 30px rgba(0,0,0,.13); transition: border-color .2s, transform .2s, box-shadow .2s; }
+    .card:hover { border-color: rgba(185,243,106,.18); transform: translateY(-1px); box-shadow: 0 12px 32px rgba(0,0,0,.2); }
+    .card.is-running { border-color: rgba(185,243,106,.21); }
+    .card.is-due { border-color: rgba(255,198,110,.36); box-shadow: 0 0 0 1px rgba(255,198,110,.035), 0 10px 30px rgba(0,0,0,.14); }
+    .card-head { display: flex; align-items: center; gap: 11px; }
+    .avatar { flex: 0 0 39px; height: 39px; display: grid; place-items: center; border: 1px solid rgba(185,243,106,.16); border-radius: 12px; background: linear-gradient(145deg, rgba(185,243,106,.13), rgba(185,243,106,.035)); color: var(--green); font-size: 14px; font-weight: 800; text-transform: uppercase; }
+    .identity { min-width: 0; flex: 1; }
+    .character-index { color: #718079; font-size: 8px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+    .character-name { margin: 3px 0 0; overflow: hidden; color: #edf4ee; font-size: 16px; font-weight: 690; letter-spacing: -.025em; text-overflow: ellipsis; white-space: nowrap; }
+    .icon-btn { width: 31px; height: 31px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 9px; background: transparent; color: #65726c; cursor: pointer; transition: .17s; }
+    .icon-btn:hover { border-color: rgba(255,132,119,.2); background: rgba(255,132,119,.08); color: var(--red); }
+    .icon-btn svg { width: 15px; height: 15px; }
+    .license-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 16px 0 13px; padding: 10px 11px; border: 1px solid rgba(255,255,255,.045); border-radius: 11px; background: rgba(255,255,255,.018); }
+    .license-copy { display: flex; gap: 9px; align-items: center; min-width: 0; }
+    .license-mark { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #55615b; }
+    .license-row.enabled .license-mark { background: var(--blue); box-shadow: 0 0 9px rgba(139,224,192,.55); }
+    .license-label { display: block; color: #c4cec8; font-size: 10px; font-weight: 650; }
+    .license-sub { display: block; margin-top: 2px; color: #718079; font-size: 9px; }
+    .switch-wrap { display: flex; align-items: center; gap: 7px; color: #9ca9a2; cursor: pointer; user-select: none; }
+    .switch-wrap input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .switch { position: relative; width: 31px; height: 18px; border: 1px solid #3c4843; border-radius: 20px; background: #26312d; transition: .18s; }
+    .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #829089; transition: .18s; }
+    .switch-wrap input:checked + .switch { border-color: rgba(139,224,192,.56); background: rgba(80,155,125,.28); }
+    .switch-wrap input:checked + .switch::after { left: 15px; background: var(--blue); box-shadow: 0 0 9px rgba(139,224,192,.4); }
+    .switch-wrap input:focus-visible + .switch { outline: 2px solid var(--green); outline-offset: 2px; }
+    .switch-label { font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 23px; }
+    .timer-panel { padding: 14px 14px 12px; border: 1px solid rgba(255,255,255,.055); border-radius: 13px; background: rgba(7,12,12,.42); }
+    .timer-topline { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .status-pill { display: inline-flex; align-items: center; gap: 6px; color: #8c9992; font-size: 8px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+    .status-pill::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #64716a; }
+    .status-pill.running { color: var(--green); }
+    .status-pill.running::before { background: var(--green); box-shadow: 0 0 8px rgba(185,243,106,.75); }
+    .status-pill.due { color: var(--amber); }
+    .status-pill.due::before { background: var(--amber); box-shadow: 0 0 8px rgba(255,198,110,.5); }
+    .duration-chip { padding: 5px 7px; border: 1px solid rgba(185,243,106,.12); border-radius: 6px; color: #96a687; background: rgba(185,243,106,.045); font: 700 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .deadline-label { margin-top: 13px; color: #7d8b83; font-size: 9px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+    .deadline-time { margin-top: 4px; color: #f0f7ee; font: 600 24px/1.05 ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; letter-spacing: -.06em; }
+    .deadline-time.empty { color: #67736d; font: 500 14px/1.6 ui-sans-serif, system-ui, sans-serif; letter-spacing: -.02em; }
+    .deadline-date { margin-top: 4px; color: #77847e; font-size: 9px; }
+    .countdown-line { display: flex; justify-content: space-between; align-items: end; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.055); }
+    .countdown-caption { color: #85928a; font-size: 8px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    .countdown { color: var(--green); font: 650 17px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; letter-spacing: -.06em; white-space: nowrap; }
+    .countdown.idle { color: #65736c; font-size: 13px; font-weight: 500; letter-spacing: 0; }
+    .timer-panel.is-due .countdown { color: var(--amber); }
+    .progress-track { width: 100%; height: 3px; margin-top: 12px; overflow: hidden; border-radius: 4px; background: #27312d; }
+    .progress-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #83c43e, #cdf984); transition: width .5s linear; }
+    .timer-panel.is-due .progress-fill { background: var(--amber); }
+    .timer-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 7px; color: #697770; font-size: 8px; }
+    .action-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 38px; margin-top: 12px; border: 1px solid rgba(185,243,106,.23); border-radius: 10px; background: rgba(185,243,106,.09); color: #c9f792; cursor: pointer; font-size: 10px; font-weight: 750; transition: .18s; }
+    .action-btn:hover { border-color: rgba(185,243,106,.47); background: rgba(185,243,106,.15); color: #d8ffa7; }
+    .action-btn.primary { border-color: rgba(185,243,106,.34); background: var(--green); color: #17200e; }
+    .action-btn.primary:hover { background: #d1ff92; }
+    .action-btn svg { width: 14px; height: 14px; }
+
+    .empty-state { display: none; grid-column: 1 / -1; min-height: 250px; padding: 40px 20px; border: 1px dashed rgba(190,217,198,.17); border-radius: var(--radius); background: rgba(18,27,27,.43); text-align: center; }
+    .empty-state.show { display: grid; place-items: center; }
+    .empty-icon { width: 45px; height: 45px; display: grid; place-items: center; margin: 0 auto 13px; border: 1px solid rgba(185,243,106,.19); border-radius: 15px; background: rgba(185,243,106,.07); color: var(--green); font-size: 20px; }
+    .empty-state h2 { margin: 0 0 6px; font-size: 15px; font-weight: 680; }
+    .empty-state p { max-width: 320px; margin: 0 auto 15px; color: #82918a; font-size: 11px; line-height: 1.55; }
+    .tip { display: flex; align-items: flex-start; gap: 10px; margin-top: 21px; padding: 12px 14px; border: 1px solid rgba(139,224,192,.10); border-radius: 12px; background: rgba(139,224,192,.035); color: #87958e; font-size: 10px; line-height: 1.55; }
+    .tip svg { flex: 0 0 15px; width: 15px; height: 15px; margin-top: 1px; color: var(--blue); }
+    .tip strong { color: #b8c5bd; font-weight: 700; }
+    .update-panel { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 12px 14px; border: 1px solid rgba(139,224,192,.11); border-radius: 13px; background: linear-gradient(120deg, rgba(19,31,27,.8), rgba(17,25,25,.8)); }
+    .update-mark { flex: 0 0 32px; width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid rgba(139,224,192,.18); border-radius: 10px; background: rgba(139,224,192,.06); color: var(--blue); font-size: 16px; }
+    .update-copy { min-width: 0; flex: 1; }
+    .update-title { color: #cbd8cf; font-size: 10px; font-weight: 750; }
+    .update-detail { margin-top: 3px; color: #7d8a83; font-size: 9px; line-height: 1.45; }
+    .update-progress { margin-top: 8px; }
+    .update-progress-track { height: 4px; overflow: hidden; border-radius: 5px; background: #26322e; }
+    .update-progress-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #80bf42, #c9f783); transition: width .25s ease; }
+    .update-progress-caption { display: block; margin-top: 4px; color: #7d8a83; font: 8px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .update-actions { display: flex; flex: 0 0 auto; gap: 7px; }
+    .update-btn { min-height: 31px; padding: 0 11px; border: 1px solid rgba(255,255,255,.10); border-radius: 8px; background: rgba(255,255,255,.035); color: #b5c1ba; cursor: pointer; font-size: 9px; font-weight: 700; transition: .16s; white-space: nowrap; }
+    .update-btn:hover:not(:disabled) { border-color: rgba(139,224,192,.32); background: rgba(139,224,192,.08); color: var(--text); }
+    .update-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .update-btn.primary { border-color: rgba(185,243,106,.3); background: var(--green); color: #17200e; }
+    .update-btn.primary:hover:not(:disabled) { background: #d1ff92; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; margin-top: 19px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.055); color: #5f6b65; font-size: 9px; }
+    .footer span:last-child { text-align: right; }
+
+    .modal-backdrop { position: fixed; z-index: 10; inset: 0; display: none; place-items: center; padding: 20px; background: rgba(3,7,7,.74); backdrop-filter: blur(7px); }
+    .modal-backdrop.open { display: grid; }
+    .modal { width: min(405px, 100%); padding: 22px; border: 1px solid rgba(206,237,214,.13); border-radius: 18px; background: #141e1e; box-shadow: 0 25px 100px rgba(0,0,0,.55); animation: pop .18s ease-out; }
+    @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
+    .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; margin-bottom: 18px; }
+    .modal-kicker { color: var(--green); font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    .modal h2 { margin: 5px 0 0; font-size: 21px; letter-spacing: -.04em; }
+    .modal-close { width: 29px; height: 29px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: #a6b2ac; cursor: pointer; }
+    .modal-close:hover { color: var(--text); background: rgba(255,255,255,.06); }
+    .field-label { display: block; margin-bottom: 7px; color: #9eaba4; font-size: 10px; font-weight: 700; }
+    .name-input { width: 100%; height: 43px; padding: 0 12px; outline: none; border: 1px solid rgba(255,255,255,.10); border-radius: 10px; background: #0e1515; color: var(--text); font-size: 12px; }
+    .name-input:focus { border-color: rgba(185,243,106,.5); }
+    .name-input::placeholder { color: #5e6c65; }
+    .modal-license { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; padding: 12px; border: 1px solid rgba(255,255,255,.06); border-radius: 11px; background: rgba(255,255,255,.025); }
+    .modal-license strong { display: block; color: #c8d2cc; font-size: 10px; }
+    .modal-license small { display: block; margin-top: 3px; color: #77847d; font-size: 9px; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+    .modal-actions button { flex: 1; height: 39px; border-radius: 10px; cursor: pointer; font-size: 10px; font-weight: 750; }
+    .cancel-btn { border: 1px solid var(--line); background: transparent; color: #abb7b0; }
+    .cancel-btn:hover { background: rgba(255,255,255,.045); }
+    .submit-btn { border: 1px solid rgba(185,243,106,.3); background: var(--green); color: #17200e; }
+    .submit-btn:hover { background: #d1ff92; }
+    .toast { position: fixed; z-index: 20; right: 24px; bottom: 22px; max-width: min(360px, calc(100vw - 32px)); padding: 11px 14px; border: 1px solid rgba(185,243,106,.22); border-radius: 11px; background: #17221d; color: #d7e7d8; box-shadow: 0 12px 35px rgba(0,0,0,.35); opacity: 0; transform: translateY(8px); pointer-events: none; transition: .2s; font-size: 11px; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 30px, 590px); padding-top: 19px; }
+      .topbar { flex-wrap: wrap; gap: 13px; padding-bottom: 29px; }
+      .topbar-right { width: 100%; justify-content: space-between; gap: 8px; }
+      .startup-control { padding: 7px 9px; }
+      .update-panel { flex-wrap: wrap; align-items: flex-start; }
+      .update-copy { flex-basis: calc(100% - 48px); }
+      .update-actions { width: 100%; justify-content: flex-end; padding-left: 44px; }
+      .hero { align-items: flex-start; flex-direction: column; gap: 12px; }
+      .hero-date { align-self: flex-start; }
+      .stats { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; margin-bottom: 23px; }
+      .stat { padding: 14px; }
+      .stat-value { margin-top: 9px; font-size: 24px; }
+      .toolbar { flex-wrap: wrap; gap: 10px; }
+      .filters { width: 100%; justify-content: space-between; }
+      .filter-btn { flex: 1; padding-inline: 7px; }
+      .tool-actions { width: 100%; }
+      .search { flex: 1; width: auto; }
+      .add-btn { flex: 0 0 auto; padding-inline: 11px; }
+      .cards { grid-template-columns: 1fr; }
+      .list-meta { margin-top: 15px; }
+      .footer { flex-direction: column; }
+      .footer span:last-child { text-align: left; }
+    }
+    @media (max-width: 380px) {
+      .shell { width: calc(100% - 22px); }
+      .stats { gap: 7px; }
+      .stat { padding: 12px; }
+      .stat-top { font-size: 8px; }
+      .tool-actions { gap: 6px; }
+      .add-btn { font-size: 10px; }
+      .card { padding: 13px; }
+      .deadline-time { font-size: 22px; }
+      .countdown { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2.8 21 8v8l-9 5.2L3 16V8l9-5.2Z" stroke="currentColor" stroke-width="1.5"/><path d="m8 12 2.4 2.4L16.5 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div><div class="brand-name">FORGE</div><div class="brand-sub">CRAFT CREW CONTROL</div></div>
+      </div>
+      <div class="topbar-right">
+        <div class="startup-control" id="startup-control" title="Автозапуск доступен в Windows-версии приложения">
+          <div class="startup-copy"><strong>Запуск с Windows</strong><small id="startup-status">Проверка доступности…</small></div>
+          <label class="switch-wrap" title="Запускать приложение при входе в Windows"><input id="startup-toggle" type="checkbox" aria-label="Запускать приложение при входе в Windows"><span class="switch" aria-hidden="true"></span></label>
+        </div>
+        <div class="clockbox">
+          <span class="live-dot" aria-hidden="true"></span>
+          <div><div class="clock-caption">Местное время</div><div class="clock" id="clock">--:--:--</div></div>
+        </div>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Панель смен</div>
+        <h1>Крафтеры</h1>
+        <p class="hero-copy">Отслеживай торговые смены и не пропускай время пересадки. Для каждого персонажа учитывается его торговая лицензия.</p>
+      </div>
+      <div class="hero-date">Сегодня · <strong id="today-date">—</strong></div>
+    </section>
+
+    <section class="stats" aria-label="Сводка">
+      <article class="stat">
+        <div class="stat-top"><span>Персонажи</span><span class="stat-icon">◈</span></div>
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-note">в списке крафтеров</div>
+      </article>
+      <article class="stat">
+        <div class="stat-top"><span>На рынке</span><span class="stat-icon">↗</span></div>
+        <div class="stat-value" id="stat-running">0</div>
+        <div class="stat-note">смена ещё идёт</div>
+      </article>
+      <article class="stat warning">
+        <div class="stat-top"><span>Пора пересадить</span><span class="stat-icon">!</span></div>
+        <div class="stat-value" id="stat-due">0</div>
+        <div class="stat-note">смена завершилась</div>
+      </article>
+      <article class="stat license">
+        <div class="stat-top"><span>С лицензией</span><span class="stat-icon">◇</span></div>
+        <div class="stat-value" id="stat-licensed">0</div>
+        <div class="stat-note">доступно до 24 часов</div>
+      </article>
+    </section>
+
+    <section aria-label="Персонажи">
+      <div class="toolbar">
+        <div class="filters" role="group" aria-label="Фильтр персонажей">
+          <button class="filter-btn active" type="button" data-filter="all">Все <span id="filter-all-count">0</span></button>
+          <button class="filter-btn" type="button" data-filter="timed">С таймером <span id="filter-timed-count">0</span></button>
+          <button class="filter-btn" type="button" data-filter="waiting">Ожидают <span id="filter-waiting-count">0</span></button>
+        </div>
+        <div class="tool-actions">
+          <label class="search">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.7" stroke="currentColor" stroke-width="1.7"/><path d="m16 16 4.2 4.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <input id="search" type="search" placeholder="Найти персонажа…" autocomplete="off" aria-label="Найти персонажа">
+          </label>
+          <button class="add-btn" id="add-open" type="button">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Добавить
+          </button>
+        </div>
+      </div>
+      <div class="list-meta"><span><strong id="visible-count">0 персонажей</strong> · сортировка по ближайшей пересадке</span><span>Изменения сохраняются автоматически</span></div>
+      <div class="cards" id="cards" aria-live="polite"></div>
+    </section>
+
+    <aside class="tip">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v5m0-8h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span><strong>Как пользоваться:</strong> включи лицензию для персонажа с трейдинг-лицензией, затем нажми «Начать смену» в момент посадки трейдера. Программа покажет точное время пересадки и обратный отсчёт: <strong>12 ч без лицензии / 24 ч с лицензией.</strong></span>
+    </aside>
+
+    <section class="update-panel" aria-label="Обновления программы" aria-live="polite">
+      <div class="update-mark" aria-hidden="true">↻</div>
+      <div class="update-copy">
+        <div class="update-title" id="update-title">Обновления программы</div>
+        <div class="update-detail" id="update-detail">Проверим новые версии при запуске.</div>
+        <div class="update-progress" id="update-progress-wrap" hidden>
+          <div class="update-progress-track"><div class="update-progress-fill" id="update-progress-fill"></div></div>
+          <span class="update-progress-caption" id="update-progress-caption"></span>
+        </div>
+      </div>
+      <div class="update-actions">
+        <button class="update-btn" id="check-updates" type="button">Проверить</button>
+        <button class="update-btn primary" id="install-update" type="button" hidden>Перезапустить</button>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>FORGE · менеджер крафтеров</span>
+      <span>Данные хранятся локально на этом ПК. Автозапуск Windows настраивается переключателем в приложении.</span>
+    </footer>
+  </main>
+
+  <div class="modal-backdrop" id="modal" aria-hidden="true">
+    <form class="modal" id="add-form" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-head">
+        <div><div class="modal-kicker">Новый персонаж</div><h2 id="modal-title">Добавить крафтера</h2></div>
+        <button class="modal-close" type="button" id="modal-close" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" fill="none" width="15" height="15"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <label class="field-label" for="character-name-input">Ник персонажа</label>
+      <input class="name-input" id="character-name-input" name="name" type="text" maxlength="32" placeholder="Например, CraftMaster" required autocomplete="off">
+      <label class="modal-license">
+        <span><strong>Есть торговая лицензия</strong><small>Смена будет рассчитана на 24 часа</small></span>
+        <span class="switch-wrap"><input id="new-license" type="checkbox"><span class="switch" aria-hidden="true"></span><span class="switch-label" id="new-license-label">12 ч</span></span>
+      </label>
+      <div class="modal-actions">
+        <button class="cancel-btn" type="button" id="modal-cancel">Отмена</button>
+        <button class="submit-btn" type="submit">Добавить персонажа</button>
+      </div>
+    </form>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = 'forge-crafter-manager-v1';
+      const desktopApi = window.crafterApp || null;
+      const cardsEl = document.getElementById('cards');
+      const searchEl = document.getElementById('search');
+      const modalEl = document.getElementById('modal');
+      const formEl = document.getElementById('add-form');
+      const nameInput = document.getElementById('character-name-input');
+      const licenseInput = document.getElementById('new-license');
+      const toastEl = document.getElementById('toast');
+      let filter = 'all';
+      let toastTimer;
+      let characters = loadCharacters();
+
+      function normalizeCharacters(parsed) {
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter(c => c && typeof c.id === 'string' && typeof c.name === 'string').map(c => ({
+          id: c.id,
+          name: c.name,
+          license: Boolean(c.license),
+          startedAt: Number.isFinite(c.startedAt) ? c.startedAt : null,
+          endAt: Number.isFinite(c.endAt) ? c.endAt : null,
+          shiftHours: Number.isFinite(c.shiftHours) ? c.shiftHours : null
+        }));
+      }
+      function loadCharacters() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? normalizeCharacters(JSON.parse(raw)) : [];
+        } catch (_) { return []; }
+      }
+      function saveCharacters() {
+        const snapshot = JSON.stringify(characters);
+        try { localStorage.setItem(STORAGE_KEY, snapshot); } catch (_) { /* Preview sandbox may block storage. */ }
+        if (desktopApi && desktopApi.saveCharacters) {
+          desktopApi.saveCharacters(characters).catch(() => showToast('Не удалось сохранить данные приложения'));
+        }
+      }
+      function esc(value) {
+        return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+      }
+      function hoursFor(c) { return c.license ? 24 : 12; }
+      function hasTimer(c) { return Number.isFinite(c.endAt) && Number.isFinite(c.startedAt); }
+      function isDue(c, now = Date.now()) { return hasTimer(c) && now >= c.endAt; }
+      function isRunning(c, now = Date.now()) { return hasTimer(c) && now < c.endAt; }
+      function pad(n) { return String(n).padStart(2, '0'); }
+      function durationText(ms) {
+        const sec = Math.max(0, Math.floor(ms / 1000));
+        const hours = Math.floor(sec / 3600);
+        const minutes = Math.floor((sec % 3600) / 60);
+        const seconds = sec % 60;
+        return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+      }
+      function timeText(timestamp) {
+        return new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(timestamp));
+      }
+      function dateText(timestamp) {
+        const target = new Date(timestamp);
+        const today = new Date();
+        const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1);
+        const dayKey = d => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        if (dayKey(target) === dayKey(today)) return 'сегодня';
+        if (dayKey(target) === dayKey(tomorrow)) return 'завтра';
+        return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(target).replace('.', '');
+      }
+      function timeAndDate(timestamp) { return `${dateText(timestamp)}, ${timeText(timestamp)}`; }
+      function initials(name) {
+        const cleaned = name.trim();
+        return cleaned ? Array.from(cleaned)[0].toLocaleUpperCase('ru-RU') : '?';
+      }
+      function displayNameCount(n) {
+        const mod100 = n % 100;
+        if (mod100 >= 11 && mod100 <= 14) return `${n} персонажей`;
+        const mod10 = n % 10;
+        if (mod10 === 1) return `${n} персонаж`;
+        if (mod10 >= 2 && mod10 <= 4) return `${n} персонажа`;
+        return `${n} персонажей`;
+      }
+      function showToast(message) {
+        toastEl.textContent = message;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+      }
+      function setUpdatePanel(status) {
+        const title = document.getElementById('update-title');
+        const detail = document.getElementById('update-detail');
+        const checkButton = document.getElementById('check-updates');
+        const installButton = document.getElementById('install-update');
+        const progressWrap = document.getElementById('update-progress-wrap');
+        const progressFill = document.getElementById('update-progress-fill');
+        const progressCaption = document.getElementById('update-progress-caption');
+        const version = status && status.version ? ` ${status.version}` : '';
+        const state = status && status.state ? status.state : 'idle';
+        checkButton.disabled = false;
+        checkButton.textContent = 'Проверить';
+        installButton.hidden = true;
+        progressWrap.hidden = true;
+        progressFill.style.width = '0%';
+        if (state === 'unsupported') {
+          title.textContent = 'Автообновления';
+          detail.textContent = desktopApi ? 'Доступно в установленной Windows-версии приложения.' : 'Доступно в Windows-приложении, не в браузерном предпросмотре.';
+          checkButton.disabled = true;
+        } else if (state === 'checking') {
+          title.textContent = 'Проверяем обновления';
+          detail.textContent = 'Подключаемся к GitHub Releases…';
+          checkButton.disabled = true;
+          checkButton.textContent = 'Проверяю…';
+        } else if (state === 'available') {
+          title.textContent = `Найдена версия${version}`;
+          detail.textContent = 'Скачиваю обновление…';
+          checkButton.disabled = true;
+          progressWrap.hidden = false;
+          progressCaption.textContent = 'Подготовка загрузки…';
+        } else if (state === 'downloading') {
+          const percent = Math.max(0, Math.min(100, Number(status.percent) || 0));
+          title.textContent = `Скачиваю обновление${version}`;
+          detail.textContent = 'Приложение можно использовать, пока идёт загрузка.';
+          checkButton.disabled = true;
+          checkButton.textContent = `${percent}%`;
+          progressWrap.hidden = false;
+          progressFill.style.width = `${percent}%`;
+          progressCaption.textContent = `${percent}% загружено`;
+        } else if (state === 'downloaded') {
+          title.textContent = `Обновление${version} готово`;
+          detail.textContent = 'Перезапусти программу, чтобы установить версию.';
+          installButton.hidden = false;
+          checkButton.disabled = true;
+          progressWrap.hidden = false;
+          progressFill.style.width = '100%';
+          progressCaption.textContent = 'Загрузка завершена';
+        } else if (state === 'up-to-date') {
+          title.textContent = 'Установлена актуальная версия';
+          detail.textContent = status.version ? `Последняя версия — ${status.version}.` : 'Новых версий пока нет.';
+        } else if (state === 'error') {
+          title.textContent = 'Не удалось проверить обновления';
+          detail.textContent = status.message || 'Проверь подключение к интернету и попробуй ещё раз.';
+        } else {
+          title.textContent = 'Обновления программы';
+          detail.textContent = 'Проверим новые версии при запуске.';
+        }
+      }
+      function sortCharacters(list, now) {
+        return list.slice().sort((a, b) => {
+          const aDue = isDue(a, now), bDue = isDue(b, now);
+          if (aDue !== bDue) return aDue ? -1 : 1;
+          const aTimed = hasTimer(a), bTimed = hasTimer(b);
+          if (aTimed && bTimed) return a.endAt - b.endAt;
+          if (aTimed !== bTimed) return aTimed ? -1 : 1;
+          return a.name.localeCompare(b.name, 'ru');
+        });
+      }
+      function renderCard(c, index, now) {
+        const timed = hasTimer(c);
+        const running = isRunning(c, now);
+        const due = isDue(c, now);
+        const duration = c.shiftHours || hoursFor(c);
+        const progress = timed ? Math.max(0, Math.min(100, ((now - c.startedAt) / (c.endAt - c.startedAt)) * 100)) : 0;
+        const pillText = due ? 'Пора пересадить' : running ? 'Смена идёт' : 'Готов к смене';
+        const deadline = timed ? `<div class="deadline-time" data-deadline-time>${esc(timeText(c.endAt))}</div><div class="deadline-date" data-deadline-date>${esc(timeAndDate(c.endAt))}</div>` : `<div class="deadline-time empty" data-deadline-time>Не запущена</div><div class="deadline-date" data-deadline-date>Запусти таймер, когда посадишь трейдера</div>`;
+        const timerPanelClass = due ? 'timer-panel is-due' : 'timer-panel';
+        const countdown = due ? '00:00:00' : running ? durationText(c.endAt - now) : '—';
+        const countdownClass = timed ? 'countdown' : 'countdown idle';
+        const footerLeft = timed ? `Старт · ${timeText(c.startedAt)}` : 'Ожидает запуска';
+        const footerRight = timed ? (due ? 'Время смены вышло' : `${Math.floor(progress)}% смены`) : `${hoursFor(c)} ч на продажу`;
+        const buttonText = !timed ? 'Начать смену' : due ? 'Пересадил · начать отсчёт' : 'Перезапустить таймер';
+        const buttonIcon = !timed
+          ? '<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'
+          : '<path d="M20 11a8 8 0 0 0-14.8-4L4 9m0-4v4h4M4 13a8 8 0 0 0 14.8 4L20 15m0 4v-4h-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>';
+        return `<article class="card${running ? ' is-running' : ''}${due ? ' is-due' : ''}" data-card="${esc(c.id)}">
+          <div class="card-head">
+            <div class="avatar" aria-hidden="true">${esc(initials(c.name))}</div>
+            <div class="identity"><div class="character-index">КРАФТЕР ${String(index + 1).padStart(2,'0')}</div><h2 class="character-name" title="${esc(c.name)}">${esc(c.name)}</h2></div>
+            <button class="icon-btn" type="button" data-remove="${esc(c.id)}" aria-label="Удалить ${esc(c.name)}" title="Удалить персонажа"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6.5 7l.8 13h9.4l.8-13M9 7V4h6v3" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div class="license-row${c.license ? ' enabled' : ''}">
+            <div class="license-copy"><span class="license-mark" aria-hidden="true"></span><span><span class="license-label">Торговая лицензия</span><span class="license-sub">${c.license ? 'Включена · до 24 часов' : 'Нет · смена 12 часов'}</span></span></div>
+            <label class="switch-wrap" title="${c.license ? 'Отключить лицензию' : 'Включить лицензию'}"><input type="checkbox" data-license="${esc(c.id)}" ${c.license ? 'checked' : ''} aria-label="Торговая лицензия для ${esc(c.name)}"><span class="switch" aria-hidden="true"></span><span class="switch-label">${c.license ? '24 ч' : '12 ч'}</span></label>
+          </div>
+          <div class="${timerPanelClass}" data-timer-panel="${esc(c.id)}">
+            <div class="timer-topline"><span class="status-pill${due ? ' due' : running ? ' running' : ''}" data-status>${pillText}</span><span class="duration-chip" data-duration>${timed ? `${duration} ЧАСОВ` : `${hoursFor(c)} ЧАСОВ`}</span></div>
+            <div class="deadline-label">Пересадить в</div>
+            ${deadline}
+            <div class="countdown-line"><span class="countdown-caption" data-countdown-label>${due ? 'статус смены' : 'до пересадки'}</span><strong class="${countdownClass}" data-countdown>${countdown}</strong></div>
+            <div class="progress-track"><div class="progress-fill" data-progress style="width:${progress.toFixed(2)}%"></div></div>
+            <div class="timer-foot"><span data-start-label>${esc(footerLeft)}</span><span data-progress-label>${esc(footerRight)}</span></div>
+          </div>
+          <button class="action-btn${!timed || due ? ' primary' : ''}" type="button" data-start="${esc(c.id)}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true">${buttonIcon}</svg>${buttonText}</button>
+        </article>`;
+      }
+      function renderCards() {
+        const now = Date.now();
+        const query = searchEl.value.trim().toLocaleLowerCase('ru-RU');
+        let list = characters.filter(c => c.name.toLocaleLowerCase('ru-RU').includes(query));
+        if (filter === 'timed') list = list.filter(hasTimer);
+        if (filter === 'waiting') list = list.filter(c => !hasTimer(c));
+        list = sortCharacters(list, now);
+        const countText = displayNameCount(list.length);
+        document.getElementById('visible-count').textContent = countText;
+        if (!list.length) {
+          const emptyTitle = characters.length === 0 ? 'Пока нет крафтеров' : (query ? 'Ничего не найдено' : 'Здесь пока пусто');
+          const emptyText = characters.length === 0 ? 'Добавь персонажей, чтобы отслеживать торговые смены и вовремя пересаживать трейдеров.' : (query ? 'Попробуй изменить запрос или переключить фильтр.' : 'В этом фильтре пока нет персонажей.');
+          const showAdd = characters.length === 0 && !query && filter === 'all';
+          cardsEl.innerHTML = `<div class="empty-state show"><div><div class="empty-icon">◈</div><h2>${emptyTitle}</h2><p>${emptyText}</p>${showAdd ? '<button class="add-btn" type="button" data-empty-add>＋ Добавить персонажа</button>' : ''}</div></div>`;
+          return;
+        }
+        cardsEl.innerHTML = list.map((c, index) => renderCard(c, characters.indexOf(c), now)).join('');
+      }
+      function updateStats() {
+        const now = Date.now();
+        document.getElementById('stat-total').textContent = characters.length;
+        document.getElementById('stat-running').textContent = characters.filter(c => isRunning(c, now)).length;
+        document.getElementById('stat-due').textContent = characters.filter(c => isDue(c, now)).length;
+        document.getElementById('stat-licensed').textContent = characters.filter(c => c.license).length;
+        document.getElementById('filter-all-count').textContent = characters.length;
+        document.getElementById('filter-timed-count').textContent = characters.filter(hasTimer).length;
+        document.getElementById('filter-waiting-count').textContent = characters.filter(c => !hasTimer(c)).length;
+      }
+      function updateHeaderClock() {
+        const now = new Date();
+        document.getElementById('clock').textContent = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(now);
+        document.getElementById('today-date').textContent = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(now);
+      }
+      function tick() {
+        const now = Date.now();
+        updateHeaderClock();
+        updateStats();
+        document.querySelectorAll('[data-card]').forEach(card => {
+          const c = characters.find(item => item.id === card.dataset.card);
+          if (!c || !hasTimer(c)) return;
+          const due = isDue(c, now);
+          const panel = card.querySelector('[data-timer-panel]');
+          const pill = card.querySelector('[data-status]');
+          const countdown = card.querySelector('[data-countdown]');
+          const label = card.querySelector('[data-countdown-label]');
+          const fill = card.querySelector('[data-progress]');
+          const progressLabel = card.querySelector('[data-progress-label]');
+          const deadlineTime = card.querySelector('[data-deadline-time]');
+          const deadlineDate = card.querySelector('[data-deadline-date]');
+          const started = card.querySelector('[data-start-label]');
+          const pct = Math.max(0, Math.min(100, ((now - c.startedAt) / (c.endAt - c.startedAt)) * 100));
+          if (deadlineTime) deadlineTime.textContent = timeText(c.endAt);
+          if (deadlineDate) deadlineDate.textContent = timeAndDate(c.endAt);
+          if (countdown) countdown.textContent = due ? '00:00:00' : durationText(c.endAt - now);
+          if (pill) { pill.textContent = due ? 'Пора пересадить' : 'Смена идёт'; pill.classList.toggle('due', due); pill.classList.toggle('running', !due); }
+          if (panel) panel.classList.toggle('is-due', due);
+          if (card) { card.classList.toggle('is-due', due); card.classList.toggle('is-running', !due); }
+          if (label) label.textContent = due ? 'статус смены' : 'до пересадки';
+          if (fill) fill.style.width = `${pct.toFixed(2)}%`;
+          if (progressLabel) progressLabel.textContent = due ? 'Время смены вышло' : `${Math.floor(pct)}% смены`;
+          if (started) started.textContent = `Старт · ${timeText(c.startedAt)}`;
+        });
+      }
+      function openModal() {
+        modalEl.classList.add('open');
+        modalEl.setAttribute('aria-hidden', 'false');
+        nameInput.value = '';
+        licenseInput.checked = false;
+        document.getElementById('new-license-label').textContent = '12 ч';
+        setTimeout(() => nameInput.focus(), 30);
+      }
+      function closeModal() {
+        modalEl.classList.remove('open');
+        modalEl.setAttribute('aria-hidden', 'true');
+      }
+      function setupUpdateControls() {
+        const checkButton = document.getElementById('check-updates');
+        const installButton = document.getElementById('install-update');
+        if (!desktopApi || !desktopApi.onUpdateStatus || !desktopApi.checkForUpdates) {
+          setUpdatePanel({ state: 'unsupported' });
+          return;
+        }
+        desktopApi.onUpdateStatus(setUpdatePanel);
+        setUpdatePanel({ state: 'checking' });
+        checkButton.addEventListener('click', async () => {
+          setUpdatePanel({ state: 'checking' });
+          try {
+            const result = await desktopApi.checkForUpdates();
+            if (result && result.supported === false) setUpdatePanel({ state: 'unsupported' });
+          } catch (_) {
+            setUpdatePanel({ state: 'error' });
+          }
+        });
+        installButton.addEventListener('click', async () => {
+          installButton.disabled = true;
+          installButton.textContent = 'Перезапускаю…';
+          try {
+            const result = await desktopApi.installUpdate();
+            if (!result || !result.ok) setUpdatePanel({ state: 'error', message: 'Не найдено скачанное обновление. Проверь ещё раз.' });
+          } catch (_) {
+            installButton.disabled = false;
+            setUpdatePanel({ state: 'error', message: 'Не удалось запустить установку. Попробуй позже.' });
+          }
+        });
+      }
+      async function updateStartupControl() {
+        const input = document.getElementById('startup-toggle');
+        const status = document.getElementById('startup-status');
+        const control = document.getElementById('startup-control');
+        if (!desktopApi) {
+          input.disabled = true;
+          status.textContent = 'В версии приложения';
+          control.classList.add('unavailable');
+          return;
+        }
+        input.disabled = true;
+        try {
+          const result = await desktopApi.getStartupState();
+          if (!result || !result.supported) {
+            input.checked = false;
+            status.textContent = (result && result.reason) || 'Доступно после установки';
+            control.classList.add('unavailable');
+            return;
+          }
+          input.checked = Boolean(result.enabled);
+          status.textContent = result.enabled ? 'Автозапуск включён' : 'Автозапуск выключен';
+          control.classList.remove('unavailable');
+          input.disabled = false;
+        } catch (_) {
+          status.textContent = 'Не удалось проверить';
+          control.classList.add('unavailable');
+        }
+      }
+      async function initializeDesktopStorage() {
+        if (!desktopApi) { await updateStartupControl(); return; }
+        try {
+          const saved = await desktopApi.loadCharacters();
+          if (Array.isArray(saved)) {
+            characters = normalizeCharacters(saved);
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(characters)); } catch (_) {}
+          } else if (characters.length) {
+            // First desktop launch: preserve any data imported from the browser prototype.
+            await desktopApi.saveCharacters(characters);
+          }
+        } catch (_) {
+          showToast('Не удалось прочитать локальные данные');
+        }
+        renderCards();
+        tick();
+        await updateStartupControl();
+      }
+
+      document.getElementById('startup-toggle').addEventListener('change', async event => {
+        const input = event.currentTarget;
+        const status = document.getElementById('startup-status');
+        if (!desktopApi) return;
+        input.disabled = true;
+        status.textContent = 'Сохраняю настройку…';
+        try {
+          const result = await desktopApi.setStartup(Boolean(input.checked));
+          input.checked = Boolean(result && result.enabled);
+          status.textContent = input.checked ? 'Автозапуск включён' : 'Автозапуск выключен';
+          if (result && result.supported) document.getElementById('startup-control').classList.remove('unavailable');
+          showToast(input.checked ? 'Приложение будет запускаться с Windows' : 'Автозапуск Windows отключён');
+        } catch (_) {
+          input.checked = !input.checked;
+          status.textContent = 'Не удалось изменить настройку';
+          showToast('Не удалось изменить настройку автозапуска');
+        } finally {
+          await updateStartupControl();
+        }
+      });
+
+      document.getElementById('add-open').addEventListener('click', openModal);
+      document.getElementById('modal-close').addEventListener('click', closeModal);
+      document.getElementById('modal-cancel').addEventListener('click', closeModal);
+      modalEl.addEventListener('click', event => { if (event.target === modalEl) closeModal(); });
+      document.addEventListener('keydown', event => { if (event.key === 'Escape' && modalEl.classList.contains('open')) closeModal(); });
+      licenseInput.addEventListener('change', () => { document.getElementById('new-license-label').textContent = licenseInput.checked ? '24 ч' : '12 ч'; });
+      formEl.addEventListener('submit', event => {
+        event.preventDefault();
+        const name = nameInput.value.trim();
+        if (!name) { nameInput.focus(); return; }
+        characters.push({ id: (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`), name, license: licenseInput.checked, startedAt: null, endAt: null, shiftHours: null });
+        saveCharacters();
+        closeModal();
+        filter = 'all';
+        document.querySelectorAll('.filter-btn').forEach(button => button.classList.toggle('active', button.dataset.filter === filter));
+        searchEl.value = '';
+        renderCards(); updateStats();
+        showToast(`Персонаж «${name}» добавлен`);
+      });
+      searchEl.addEventListener('input', renderCards);
+      document.querySelectorAll('.filter-btn').forEach(button => button.addEventListener('click', () => {
+        filter = button.dataset.filter;
+        document.querySelectorAll('.filter-btn').forEach(item => item.classList.toggle('active', item === button));
+        renderCards();
+      }));
+      cardsEl.addEventListener('change', event => {
+        const input = event.target.closest('[data-license]');
+        if (!input) return;
+        const c = characters.find(item => item.id === input.dataset.license);
+        if (!c) return;
+        c.license = input.checked;
+        saveCharacters(); renderCards(); updateStats();
+        showToast(input.checked ? 'Лицензия включена · 24 часа на следующую смену' : 'Лицензия выключена · 12 часов на следующую смену');
+      });
+      cardsEl.addEventListener('click', event => {
+        const add = event.target.closest('[data-empty-add]');
+        if (add) { openModal(); return; }
+        const removeButton = event.target.closest('[data-remove]');
+        if (removeButton) {
+          const c = characters.find(item => item.id === removeButton.dataset.remove);
+          if (!c) return;
+          if (!window.confirm(`Удалить персонажа «${c.name}» и его таймер?`)) return;
+          characters = characters.filter(item => item.id !== c.id);
+          saveCharacters(); renderCards(); updateStats();
+          showToast(`Персонаж «${c.name}» удалён`);
+          return;
+        }
+        const startButton = event.target.closest('[data-start]');
+        if (startButton) {
+          const c = characters.find(item => item.id === startButton.dataset.start);
+          if (!c) return;
+          if (isRunning(c) && !window.confirm(`У персонажа «${c.name}» ещё идёт смена. Перезапустить таймер от текущего момента?`)) return;
+          const now = Date.now();
+          c.shiftHours = hoursFor(c);
+          c.startedAt = now;
+          c.endAt = now + c.shiftHours * 60 * 60 * 1000;
+          saveCharacters(); renderCards(); updateStats();
+          showToast(`Смена «${c.name}» запущена на ${c.shiftHours} ч`);
+        }
+      });
+
+      setupUpdateControls();
+      renderCards();
+      tick();
+      initializeDesktopStorage();
+      setInterval(tick, 1000);
+    })();
+  </script>
+</body>
+</html>
