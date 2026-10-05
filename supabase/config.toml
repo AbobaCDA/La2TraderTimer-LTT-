@@ -1,0 +1,10 @@
+project_id = "ltt-cloud"
+
+[functions.telegram-bot]
+verify_jwt = false
+
+[functions.link-telegram]
+verify_jwt = true
+
+[functions.send-reminders]
+verify_jwt = false

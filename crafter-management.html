@@ -37,7 +37,31 @@
     button { color: inherit; }
     .shell { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: 28px 0 34px; }
     .topbar { display: flex; align-items: center; justify-content: space-between; padding: 2px 0 38px; }
-    .topbar-right { display: flex; align-items: center; gap: 18px; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .cloud-button { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 11px; border: 1px solid var(--line); border-radius: 10px; background: rgba(18,27,27,.58); color: #9eada5; cursor: pointer; font-size: 10px; font-weight: 750; white-space: nowrap; transition: .18s; }
+    .cloud-button:hover { border-color: rgba(139,224,192,.3); color: var(--text); background: rgba(139,224,192,.06); }
+    .cloud-button::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #75827b; }
+    .cloud-button.connected::before { background: var(--green); box-shadow: 0 0 9px rgba(185,243,106,.55); }
+    .cloud-button.waiting::before { background: var(--amber); box-shadow: 0 0 9px rgba(255,198,110,.45); }
+    .cloud-status-copy { min-width: 0; }
+    .cloud-status-title { display: block; }
+    .cloud-status-sub { display: block; margin-top: 2px; color: #6f7e76; font-size: 8px; font-weight: 600; }
+    .cloud-form-message { min-height: 18px; margin-top: 12px; color: #94a39a; font-size: 10px; line-height: 1.5; }
+    .cloud-form-message.error { color: var(--red); }
+    .cloud-form-message.success { color: var(--green); }
+    .cloud-account-summary { margin: 0 0 14px; padding: 11px 12px; border: 1px solid rgba(255,255,255,.06); border-radius: 10px; background: rgba(255,255,255,.025); color: #9eada5; font-size: 10px; line-height: 1.55; overflow-wrap: anywhere; }
+    .cloud-account-summary strong { color: #e6eee7; }
+    .cloud-section-note { margin: 8px 0 0; color: #78867f; font-size: 9px; line-height: 1.5; }
+    .cloud-modal-wide { width: min(440px, 100%); }
+    .cloud-auth-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .cloud-auth-actions button { height: 39px; border-radius: 10px; cursor: pointer; font-size: 10px; font-weight: 750; }
+    .cloud-secondary-btn { border: 1px solid var(--line); background: rgba(255,255,255,.025); color: #b7c3bb; }
+    .cloud-secondary-btn:hover { background: rgba(255,255,255,.06); }
+    .cloud-primary-btn { border: 1px solid rgba(185,243,106,.3); background: var(--green); color: #17200e; }
+    .cloud-primary-btn:hover { background: #d1ff92; }
+    .cloud-inline-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .cloud-inline-actions button { flex: 1; min-height: 38px; border-radius: 10px; cursor: pointer; font-size: 10px; font-weight: 750; }
+    .cloud-code-input { text-transform: uppercase; letter-spacing: .16em; font: 700 16px/1 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; }
     .startup-control { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 11px; background: rgba(18,27,27,.58); }
     .startup-copy strong { display: block; color: #cbd6ce; font-size: 9px; font-weight: 750; letter-spacing: .02em; }
     .startup-copy small { display: block; margin-top: 3px; color: #78867f; font-size: 8px; }
@@ -203,7 +227,8 @@
     @media (max-width: 760px) {
       .shell { width: min(100% - 30px, 590px); padding-top: 19px; }
       .topbar { flex-wrap: wrap; gap: 13px; padding-bottom: 29px; }
-      .topbar-right { width: 100%; justify-content: space-between; gap: 8px; }
+      .topbar-right { width: 100%; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+      .cloud-button { flex: 1 1 125px; }
       .startup-control { padding: 7px 9px; }
       .update-panel { flex-wrap: wrap; align-items: flex-start; }
       .update-copy { flex-basis: calc(100% - 48px); }
@@ -249,6 +274,9 @@
         <div><div class="brand-name">FORGE</div><div class="brand-sub">CRAFT CREW CONTROL</div></div>
       </div>
       <div class="topbar-right">
+        <button class="cloud-button" id="cloud-open" type="button" aria-label="Облачная синхронизация">
+          <span class="cloud-status-copy"><span class="cloud-status-title">Облако</span><span class="cloud-status-sub" id="cloud-button-status">Не подключено</span></span>
+        </button>
         <div class="startup-control" id="startup-control" title="Автозапуск доступен в Windows-версии приложения">
           <div class="startup-copy"><strong>Запуск с Windows</strong><small id="startup-status">Проверка доступности…</small></div>
           <label class="switch-wrap" title="Запускать приложение при входе в Windows"><input id="startup-toggle" type="checkbox" aria-label="Запускать приложение при входе в Windows"><span class="switch" aria-hidden="true"></span></label>
@@ -379,6 +407,41 @@
       </div>
     </form>
   </div>
+  <div class="modal-backdrop" id="cloud-modal" aria-hidden="true">
+    <section class="modal cloud-modal-wide" role="dialog" aria-modal="true" aria-labelledby="cloud-modal-title">
+      <div class="modal-head">
+        <div><div class="modal-kicker">Синхронизация</div><h2 id="cloud-modal-title">Облачный аккаунт</h2></div>
+        <button class="modal-close" type="button" id="cloud-close" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" fill="none" width="15" height="15"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div id="cloud-auth-view">
+        <label class="field-label" for="cloud-email-input">Email</label>
+        <input class="name-input" id="cloud-email-input" type="email" maxlength="254" placeholder="name@example.com" autocomplete="email">
+        <label class="field-label" for="cloud-password-input" style="margin-top:13px">Пароль</label>
+        <input class="name-input" id="cloud-password-input" type="password" minlength="8" maxlength="128" placeholder="Не менее 8 символов" autocomplete="current-password">
+        <div class="cloud-auth-actions">
+          <button class="cloud-primary-btn" id="cloud-sign-in" type="button">Войти</button>
+          <button class="cloud-secondary-btn" id="cloud-sign-up" type="button">Создать аккаунт</button>
+        </div>
+        <p class="cloud-section-note">Каждый пользователь входит в свой аккаунт. Персонажи разных пользователей разделены.</p>
+      </div>
+      <div id="cloud-account-view" hidden>
+        <div class="cloud-account-summary"><strong id="cloud-account-email"></strong><br><span id="cloud-account-status">Проверяем доступ…</span></div>
+        <div id="cloud-link-panel">
+          <label class="field-label" for="cloud-pair-code">Одноразовый код из Telegram-бота</label>
+          <input class="name-input cloud-code-input" id="cloud-pair-code" type="text" maxlength="10" placeholder="XXXXXXXXXX" autocomplete="one-time-code" autocapitalize="characters">
+          <p class="cloud-section-note">Открой @LL2T_Bot и отправь /start. Введи полученный код сюда; он одноразовый, действует 10 минут, подтверждение владельца не требуется.</p>
+          <div class="cloud-inline-actions"><button class="cloud-primary-btn" id="cloud-link-button" type="button">Привязать Telegram</button></div>
+        </div>
+        <div class="cloud-inline-actions">
+          <button class="cloud-secondary-btn" id="cloud-refresh-button" type="button">Синхронизировать</button>
+          <button class="cloud-secondary-btn" id="cloud-sign-out" type="button">Выйти</button>
+        </div>
+      </div>
+      <div class="cloud-form-message" id="cloud-message" role="status" aria-live="polite"></div>
+    </section>
+  </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
@@ -400,7 +463,13 @@
       let filter = 'all';
       let toastTimer;
       let editingTimeCharacterId = null;
-      let characters = loadCharacters();
+      let cloudState = { signedIn: false };
+      let cloudSyncEnabled = false;
+      let cloudRefreshTimer = null;
+      let cloudRefreshBusy = false;
+      let activeLocalUserId = null;
+      let activeLocalRole = null;
+      let characters = desktopApi ? [] : loadCharacters();
 
       function normalizeCharacters(parsed) {
         if (!Array.isArray(parsed)) return [];
@@ -423,7 +492,24 @@
         const snapshot = JSON.stringify(characters);
         try { localStorage.setItem(STORAGE_KEY, snapshot); } catch (_) { /* Preview sandbox may block storage. */ }
         if (desktopApi && desktopApi.saveCharacters) {
-          desktopApi.saveCharacters(characters).catch(() => showToast('Не удалось сохранить данные приложения'));
+          desktopApi.saveCharacters(characters).then(async (localResult) => {
+            if (localResult && localResult.saved === false && !localResult.protected) {
+              showToast('Не удалось сохранить локальные данные');
+              return;
+            }
+            if (!activeLocalUserId || !desktopApi.saveCloudCharacters) return;
+            let initialSyncComplete = false;
+            try { initialSyncComplete = localStorage.getItem(`forge-cloud-sync-complete-${activeLocalUserId}`) === '1'; } catch (_) {}
+            if (!cloudSyncEnabled && !initialSyncComplete) return;
+            try {
+              const result = await desktopApi.saveCloudCharacters(characters);
+              if (!result || !result.synced) {
+                if (cloudSyncEnabled) setCloudButtonStatus('Ожидает синхронизации', 'waiting');
+              }
+            } catch (_) {
+              if (cloudSyncEnabled) setCloudButtonStatus('Ожидает синхронизации', 'waiting');
+            }
+          }).catch(() => showToast('Не удалось сохранить локальные данные'));
         }
       }
       function esc(value) {
@@ -475,6 +561,277 @@
         toastEl.classList.add('show');
         clearTimeout(toastTimer);
         toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+      }
+      function setCloudButtonStatus(label, mode = '') {
+        const button = document.getElementById('cloud-open');
+        const status = document.getElementById('cloud-button-status');
+        if (!button || !status) return;
+        status.textContent = label;
+        button.classList.remove('connected', 'waiting');
+        if (mode) button.classList.add(mode);
+      }
+      function setCloudMessage(message, type = '') {
+        const element = document.getElementById('cloud-message');
+        if (!element) return;
+        element.textContent = message || '';
+        element.classList.remove('error', 'success');
+        if (type) element.classList.add(type);
+      }
+      function cloudErrorText(code) {
+        const messages = {
+          sign_in_required: 'Сначала войди в аккаунт приложения.',
+          invalid_session: 'Сессия устарела. Войди в приложение ещё раз.',
+          invalid_code_format: 'Код должен состоять из 10 латинских букв или цифр.',
+          pairing_code_not_found: 'Код не найден. Запроси новый командой /start в боте.',
+          pairing_code_expired: 'Срок действия кода истёк. Запроси новый командой /start.',
+          waiting_for_owner_approval: 'Этот код создан до включения автоматической привязки. Запроси новый командой /start в @LL2T_Bot.',
+          pairing_code_unavailable: 'Код отклонён, использован или недействителен. Запроси новый через /start.',
+          pairing_code_already_used_or_unavailable: 'Код уже использован или недействителен. Запроси новый через /start.',
+          account_or_telegram_already_linked: 'Этот аккаунт приложения или Telegram уже привязан.',
+          account_not_available: 'Аккаунт пока не активен. Проверь подтверждение email и попробуй снова.',
+          telegram_link_required: 'Сначала привяжи Telegram одноразовым кодом из @LL2T_Bot.',
+          account_suspended: 'Доступ к аккаунту приостановлен. Свяжись с владельцем.',
+          profile_not_ready: 'Профиль облака пока не найден. Возможно, настройка базы ещё не завершена.',
+          pending_sync_failed: 'Не удалось отправить отложенные изменения. Локальные данные сохранены; повторим позже.'
+        };
+        if (messages[code]) return messages[code];
+        const value = String(code || '');
+        if (/invalid login credentials|invalid email or password/i.test(value)) return 'Неверный email или пароль.';
+        if (/email not confirmed/i.test(value)) return 'Сначала подтверди email по ссылке из письма.';
+        if (/already registered|user already registered/i.test(value)) return 'Этот email уже зарегистрирован. Попробуй войти.';
+        if (/fetch|network|timeout|failed to connect/i.test(value)) return 'Не удалось подключиться к облаку. Проверь интернет и повтори попытку.';
+        return value ? `Операция не выполнена: ${value}` : 'Не удалось выполнить операцию. Попробуй ещё раз.';
+      }
+      function persistCharactersLocally() {
+        const snapshot = JSON.stringify(characters);
+        try { localStorage.setItem(STORAGE_KEY, snapshot); } catch (_) {}
+        if (desktopApi && desktopApi.saveCharacters) desktopApi.saveCharacters(characters).catch(() => {});
+      }
+      function renderCloudState(state) {
+        cloudState = state || { signedIn: false };
+        const authView = document.getElementById('cloud-auth-view');
+        const accountView = document.getElementById('cloud-account-view');
+        const linkPanel = document.getElementById('cloud-link-panel');
+        const accountEmail = document.getElementById('cloud-account-email');
+        const accountStatus = document.getElementById('cloud-account-status');
+        if (!state || !state.signedIn) {
+          authView.hidden = false;
+          accountView.hidden = true;
+          setCloudButtonStatus('Не подключено');
+          return;
+        }
+        authView.hidden = true;
+        accountView.hidden = false;
+        accountEmail.textContent = state.email || 'Аккаунт';
+        if (!state.profileReady) {
+          accountStatus.textContent = 'Профиль не найден. Облачная схема может быть ещё не применена.';
+          linkPanel.hidden = true;
+          setCloudButtonStatus('Проверить настройку', 'waiting');
+        } else if (state.accessStatus === 'active') {
+          accountStatus.textContent = state.role === 'owner'
+            ? 'Аккаунт владельца подключён. Списки пользователей разделены; владельцу доступен только его список.'
+            : 'Telegram подключён. Данные синхронизируются между устройствами.';
+          linkPanel.hidden = true;
+          setCloudButtonStatus('Синхронизация включена', cloudSyncEnabled ? 'connected' : 'waiting');
+        } else if (state.accessStatus === 'suspended') {
+          accountStatus.textContent = 'Доступ приостановлен владельцем.';
+          linkPanel.hidden = true;
+          setCloudButtonStatus('Доступ приостановлен', 'waiting');
+        } else {
+          accountStatus.textContent = 'Привяжи Telegram одноразовым кодом из бота. После ввода доступ включится автоматически.';
+          linkPanel.hidden = false;
+          setCloudButtonStatus('Нужна привязка', 'waiting');
+        }
+      }
+      function openCloudModal() {
+        const modal = document.getElementById('cloud-modal');
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        setCloudMessage(desktopApi ? '' : 'Подключение к облаку доступно в установленной версии приложения.');
+        refreshCloudState({ silent: true });
+      }
+      function closeCloudModal() {
+        const modal = document.getElementById('cloud-modal');
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+      }
+      async function refreshCloudState(options = {}) {
+        if (!desktopApi || !desktopApi.getCloudState || cloudRefreshBusy) return;
+        cloudRefreshBusy = true;
+        try {
+          const state = await desktopApi.getCloudState();
+          if (state && state.signedIn) {
+            const role = state.role || 'member';
+            if (state.userId !== activeLocalUserId || role !== activeLocalRole) {
+              const scopedCharacters = await desktopApi.loadCharacters();
+              if (Array.isArray(scopedCharacters)) {
+                characters = normalizeCharacters(scopedCharacters);
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(characters)); } catch (_) {}
+                renderCards();
+                updateStats();
+                tick();
+              }
+              activeLocalUserId = state.userId || null;
+              activeLocalRole = role;
+            }
+          } else if (activeLocalUserId) {
+            activeLocalUserId = null;
+            activeLocalRole = null;
+            characters = [];
+            try { localStorage.setItem(STORAGE_KEY, '[]'); } catch (_) {}
+            renderCards();
+            updateStats();
+            tick();
+          }
+          renderCloudState(state);
+          if (!state || !state.signedIn || !state.profileReady || state.accessStatus !== 'active') {
+            cloudSyncEnabled = false;
+            return;
+          }
+          const markerKey = `forge-cloud-sync-complete-${state.userId}`;
+          const alreadyInitialized = localStorage.getItem(markerKey) === '1';
+          if (alreadyInitialized && desktopApi.saveCloudCharacters) {
+            // Reconcile any local edits saved just before an offline shutdown against the last known cloud snapshot.
+            try { await desktopApi.saveCloudCharacters(characters); } catch (_) {}
+          }
+          const loaded = await desktopApi.loadCloudCharacters();
+          if (!loaded || !loaded.ok || !loaded.active) {
+            if (!options.silent && loaded?.error) setCloudMessage(cloudErrorText(loaded.error), 'error');
+            setCloudButtonStatus('Нет связи с облаком', 'waiting');
+            cloudSyncEnabled = false;
+            return;
+          }
+          const remote = normalizeCharacters(loaded.characters);
+          const remoteIds = new Set(remote.map((item) => item.id));
+          const localOnly = characters.filter((item) => !remoteIds.has(item.id));
+          if (!alreadyInitialized && localOnly.length > 0) {
+            if (options.background) {
+              cloudSyncEnabled = false;
+              setCloudButtonStatus('Импорт не завершён', 'waiting');
+              return;
+            }
+            const shouldImport = window.confirm(
+              `Перенести ${localOnly.length} локальных персонажей в облако для аккаунта ${state.email}?\n\n` +
+              'Будут добавлены только отсутствующие в облаке записи. При совпадении ID облачная версия останется основной. Локальная резервная копия сохранится.'
+            );
+            if (!shouldImport) {
+              cloudSyncEnabled = false;
+              setCloudButtonStatus('Импорт не завершён', 'waiting');
+              setCloudMessage('Облако подключено, но локальные данные пока не переносились. Открой синхронизацию и подтверди перенос, когда будешь готов.', 'error');
+              return;
+            }
+            const merged = await desktopApi.mergeLocalCharacters(localOnly);
+            if (!merged || !merged.ok) {
+              cloudSyncEnabled = false;
+              setCloudButtonStatus('Не удалось перенести', 'waiting');
+              setCloudMessage(cloudErrorText(merged?.error), 'error');
+              return;
+            }
+            const reloaded = await desktopApi.loadCloudCharacters();
+            if (!reloaded || !reloaded.ok || !reloaded.active) {
+              cloudSyncEnabled = false;
+              setCloudMessage('Персонажи отправлены, но не удалось перечитать облачный список. Нажми «Синхронизировать».', 'error');
+              return;
+            }
+            remote.splice(0, remote.length, ...normalizeCharacters(reloaded.characters));
+            showToast(`В облако перенесено персонажей: ${merged.imported}`);
+          }
+          localStorage.setItem(markerKey, '1');
+          cloudSyncEnabled = true;
+          renderCloudState(state);
+          const currentJson = JSON.stringify(characters);
+          const remoteJson = JSON.stringify(remote);
+          if (currentJson !== remoteJson) {
+            characters = remote;
+            persistCharactersLocally();
+            renderCards();
+            updateStats();
+            tick();
+          }
+          setCloudButtonStatus('Синхронизация включена', 'connected');
+          if (!options.silent && options.notify !== false) setCloudMessage('Синхронизация завершена.', 'success');
+        } catch (_) {
+          cloudSyncEnabled = false;
+          setCloudButtonStatus('Не удалось подключиться', 'waiting');
+          if (!options.silent) setCloudMessage('Не удалось связаться с облаком. Локальные данные сохранены.', 'error');
+        } finally {
+          cloudRefreshBusy = false;
+        }
+      }
+      function setupCloudControls() {
+        const cloudButton = document.getElementById('cloud-open');
+        const cloudModal = document.getElementById('cloud-modal');
+        const emailInput = document.getElementById('cloud-email-input');
+        const passwordInput = document.getElementById('cloud-password-input');
+        cloudButton.addEventListener('click', openCloudModal);
+        document.getElementById('cloud-close').addEventListener('click', closeCloudModal);
+        cloudModal.addEventListener('click', (event) => { if (event.target === cloudModal) closeCloudModal(); });
+        if (!desktopApi || !desktopApi.getCloudState) return;
+        document.getElementById('cloud-sign-in').addEventListener('click', async () => {
+          const email = emailInput.value.trim();
+          const password = passwordInput.value;
+          if (!email || !password) { setCloudMessage('Введи email и пароль.', 'error'); return; }
+          setCloudMessage('Входим…');
+          let result;
+          try { result = await desktopApi.cloudSignIn(email, password); }
+          catch (error) { setCloudMessage(cloudErrorText(error?.message), 'error'); return; }
+          if (!result?.ok) { setCloudMessage(cloudErrorText(result?.error), 'error'); return; }
+          setCloudMessage('Вход выполнен.', 'success');
+          await refreshCloudState({ silent: true, notify: false });
+        });
+        document.getElementById('cloud-sign-up').addEventListener('click', async () => {
+          const email = emailInput.value.trim();
+          const password = passwordInput.value;
+          if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setCloudMessage('Введи корректный email.', 'error'); return; }
+          if (password.length < 8) { setCloudMessage('Пароль должен быть не короче 8 символов.', 'error'); return; }
+          setCloudMessage('Создаём аккаунт…');
+          let result;
+          try { result = await desktopApi.cloudSignUp(email, password); }
+          catch (error) { setCloudMessage(cloudErrorText(error?.message), 'error'); return; }
+          if (!result?.ok) { setCloudMessage(cloudErrorText(result?.error), 'error'); return; }
+          if (result.emailConfirmationRequired) {
+            setCloudMessage(`Письмо для подтверждения отправлено на ${result.email}. Подтверди email, затем войди в приложение.`, 'success');
+          } else {
+            setCloudMessage('Аккаунт создан. Теперь привяжи Telegram через код из бота.', 'success');
+            await refreshCloudState({ silent: true, notify: false });
+          }
+        });
+        document.getElementById('cloud-link-button').addEventListener('click', async () => {
+          const code = document.getElementById('cloud-pair-code').value.trim().toUpperCase();
+          if (!code) { setCloudMessage('Введи код, который прислал бот.', 'error'); return; }
+          setCloudMessage('Проверяем код…');
+          let result;
+          try { result = await desktopApi.linkTelegram(code); }
+          catch (error) { setCloudMessage(cloudErrorText(error?.message), 'error'); return; }
+          if (!result?.ok) { setCloudMessage(cloudErrorText(result?.error), 'error'); return; }
+          document.getElementById('cloud-pair-code').value = '';
+          setCloudMessage('Telegram привязан. Загружаем данные…', 'success');
+          await refreshCloudState({ silent: true, notify: false });
+        });
+        document.getElementById('cloud-refresh-button').addEventListener('click', async () => {
+          setCloudMessage('Синхронизируем…');
+          await refreshCloudState({ silent: true, notify: false });
+          if (cloudSyncEnabled) setCloudMessage('Синхронизация завершена.', 'success');
+        });
+        document.getElementById('cloud-sign-out').addEventListener('click', async () => {
+          let result;
+          try { result = await desktopApi.cloudSignOut(); }
+          catch (error) { setCloudMessage(cloudErrorText(error?.message), 'error'); return; }
+          if (!result?.ok) { setCloudMessage('Не удалось завершить выход. Повтори попытку.', 'error'); return; }
+          cloudSyncEnabled = false;
+          cloudState = { signedIn: false };
+          activeLocalUserId = null;
+          activeLocalRole = null;
+          let signedOutCharacters = null;
+          try { signedOutCharacters = await desktopApi.loadCharacters(); } catch (_) {}
+          characters = Array.isArray(signedOutCharacters) ? normalizeCharacters(signedOutCharacters) : [];
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(characters)); } catch (_) {}
+          renderCards();
+          updateStats();
+          tick();
+          renderCloudState(cloudState);
+          setCloudMessage('Вы вышли. Облачный список аккаунта скрыт; локальные данные сохранены.', 'success');
+        });
       }
       function setUpdatePanel(status) {
         const title = document.getElementById('update-title');
@@ -745,9 +1102,14 @@
           if (Array.isArray(saved)) {
             characters = normalizeCharacters(saved);
             try { localStorage.setItem(STORAGE_KEY, JSON.stringify(characters)); } catch (_) {}
-          } else if (characters.length) {
-            // First desktop launch: preserve any data imported from the browser prototype.
-            await desktopApi.saveCharacters(characters);
+          } else {
+            // First desktop launch: import records saved by the browser prototype if no desktop file exists.
+            const browserSaved = loadCharacters();
+            if (browserSaved.length) {
+              characters = browserSaved;
+              await desktopApi.saveCharacters(characters);
+            }
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(characters)); } catch (_) {}
           }
         } catch (_) {
           showToast('Не удалось прочитать локальные данные');
@@ -755,6 +1117,7 @@
         renderCards();
         tick();
         await updateStartupControl();
+        await refreshCloudState({ initial: true, silent: true, notify: false });
       }
 
       document.getElementById('startup-toggle').addEventListener('change', async event => {
@@ -789,6 +1152,7 @@
         if (event.key !== 'Escape') return;
         if (timeModalEl.classList.contains('open')) closeTimeModal();
         else if (modalEl.classList.contains('open')) closeModal();
+        else if (document.getElementById('cloud-modal').classList.contains('open')) closeCloudModal();
       });
       boardingTimeInput.addEventListener('input', () => {
         boardingTimeError.textContent = '';
@@ -883,10 +1247,17 @@
       });
 
       setupUpdateControls();
+      setupCloudControls();
+      renderCloudState({ signedIn: false });
       renderCards();
       tick();
       initializeDesktopStorage();
       setInterval(tick, 1000);
+      if (desktopApi && desktopApi.getCloudState) {
+        cloudRefreshTimer = setInterval(() => {
+          refreshCloudState({ background: true, silent: true, notify: false });
+        }, 30000);
+      }
     })();
   </script>
 </body>

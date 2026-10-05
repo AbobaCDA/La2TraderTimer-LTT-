@@ -1,6 +1,6 @@
 {
   "name": "forge-crafter-manager",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "Локальный менеджер торговых смен крафтеров",
   "author": "Forge",
@@ -16,6 +16,7 @@
     "release:win": "electron-builder --win nsis --x64 --publish always"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.109.0",
     "electron-updater": "6.8.9"
   },
   "devDependencies": {

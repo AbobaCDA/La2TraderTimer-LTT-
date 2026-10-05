@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const { autoUpdater } = require('electron-updater');
+const cloud = require('./cloud');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
@@ -21,7 +22,11 @@ if (!gotSingleInstanceLock) {
   let mainWindow = null;
   let updateCheckPromise = null;
   let updateDownloaded = false;
+  let characterSaveQueue = Promise.resolve();
   const charactersFile = () => path.join(app.getPath('userData'), 'characters.json');
+  const offlineCharactersFile = () => path.join(app.getPath('userData'), 'characters-offline.json');
+  const accountCharactersFile = (userId) => path.join(app.getPath('userData'), `characters-${String(userId).replace(/[^a-zA-Z0-9_-]/g, '')}.json`);
+  const legacyOwnerFile = () => path.join(app.getPath('userData'), 'legacy-characters-owner.json');
   const supportsAutoUpdate = () => process.platform === 'win32' && app.isPackaged;
 
   function sendUpdateStatus(state, extra = {}) {
@@ -98,26 +103,93 @@ if (!gotSingleInstanceLock) {
     });
   }
 
-  ipcMain.handle('characters:load', async () => {
+  async function readCharactersFile(file) {
     try {
-      const text = await fs.readFile(charactersFile(), 'utf8');
-      const data = JSON.parse(text);
-      return cleanCharacters(data);
+      return cleanCharacters(JSON.parse(await fs.readFile(file, 'utf8')));
     } catch (error) {
       if (error && error.code === 'ENOENT') return null;
       throw error;
     }
-  });
+  }
 
-  ipcMain.handle('characters:save', async (_event, records) => {
-    const characters = cleanCharacters(records);
-    const file = charactersFile();
+  async function readLegacyOwner() {
+    try { return JSON.parse(await fs.readFile(legacyOwnerFile(), 'utf8')); }
+    catch (error) { if (error && error.code === 'ENOENT') return null; throw error; }
+  }
+
+  async function writeLegacyOwner(userId) {
+    const file = legacyOwnerFile();
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    const tempFile = `${file}.${process.pid}.tmp`;
+    await fs.writeFile(tempFile, JSON.stringify({ userId, claimedAt: new Date().toISOString() }), 'utf8');
+    await fs.rename(tempFile, file);
+  }
+
+  async function writeCharactersFile(file, characters) {
     await fs.mkdir(path.dirname(file), { recursive: true });
     const tempFile = `${file}.${process.pid}.tmp`;
     await fs.writeFile(tempFile, JSON.stringify(characters, null, 2), 'utf8');
     await fs.rename(tempFile, file);
-    return { saved: true };
+  }
+
+  ipcMain.handle('characters:load', async () => {
+    const state = await cloud.getLocalState();
+    if (!state || !state.signedIn) {
+      const legacyOwner = await readLegacyOwner();
+      if (legacyOwner && legacyOwner.userId) return (await readCharactersFile(offlineCharactersFile())) || [];
+      return readCharactersFile(charactersFile());
+    }
+
+    if (!state.userId) return [];
+    const accountFile = accountCharactersFile(state.userId);
+    const accountCharacters = await readCharactersFile(accountFile);
+
+    if (state.profileReady && state.accessStatus === 'active' && state.role === 'owner') {
+      const legacyOwner = await readLegacyOwner();
+      if (!legacyOwner) {
+        await writeLegacyOwner(state.userId);
+        const legacyCharacters = (await readCharactersFile(charactersFile())) || [];
+        if (!accountCharacters) return legacyCharacters;
+        const combined = new Map(legacyCharacters.map((item) => [item.id, item]));
+        for (const item of accountCharacters) combined.set(item.id, item);
+        return [...combined.values()];
+      }
+      if (legacyOwner.userId === state.userId && !accountCharacters) {
+        return (await readCharactersFile(charactersFile())) || [];
+      }
+    }
+    return accountCharacters || [];
   });
+
+  ipcMain.handle('characters:save', (_event, records) => {
+    const characters = cleanCharacters(records);
+    const operation = characterSaveQueue.then(async () => {
+      const state = await cloud.getLocalState();
+      let file = charactersFile();
+      if (state && state.signedIn && state.userId) {
+        file = accountCharactersFile(state.userId);
+      } else {
+        const legacyOwner = await readLegacyOwner();
+        if (legacyOwner && legacyOwner.userId) file = offlineCharactersFile();
+      }
+      await writeCharactersFile(file, characters);
+      return { saved: true };
+    });
+    characterSaveQueue = operation.catch(() => {});
+    return operation;
+  });
+
+  ipcMain.handle('cloud:get-state', () => cloud.getState());
+  ipcMain.handle('cloud:sign-up', (_event, email, password) => cloud.signUp(email, password));
+  ipcMain.handle('cloud:sign-in', (_event, email, password) => cloud.signIn(email, password));
+  ipcMain.handle('cloud:sign-out', async () => {
+    await characterSaveQueue;
+    return cloud.signOut();
+  });
+  ipcMain.handle('cloud:load-characters', () => cloud.loadCloudCharacters());
+  ipcMain.handle('cloud:save-characters', (_event, records) => cloud.saveCharacters(records));
+  ipcMain.handle('cloud:merge-local-characters', (_event, records) => cloud.mergeLocalCharacters(records));
+  ipcMain.handle('cloud:link-telegram', (_event, code) => cloud.linkTelegram(code));
 
   function startupExecutablePath() {
     // NSIS portable runs the real app from a temporary folder; register its stable launcher instead.
@@ -191,6 +263,7 @@ if (!gotSingleInstanceLock) {
   }
 
   app.whenReady().then(() => {
+    cloud.initialize();
     createWindow();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
