@@ -86,8 +86,9 @@
     .add-btn svg { width: 15px; height: 15px; }
     .list-meta { display: flex; justify-content: space-between; align-items: center; margin: 19px 1px 11px; color: #74817b; font-size: 10px; letter-spacing: .04em; }
     .list-meta strong { color: #bdc9c2; font-weight: 650; }
-    .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
-    .card { position: relative; min-width: 0; padding: 17px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(145deg, rgba(20,30,30,.97), rgba(15,22,23,.96)); box-shadow: 0 9px 30px rgba(0,0,0,.13); transition: border-color .2s, transform .2s, box-shadow .2s; }
+    .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+    @media (min-width: 1120px) { .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    .card { position: relative; min-width: 0; padding: 15px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(145deg, rgba(20,30,30,.97), rgba(15,22,23,.96)); box-shadow: 0 9px 30px rgba(0,0,0,.13); transition: border-color .2s, transform .2s, box-shadow .2s; }
     .card:hover { border-color: rgba(185,243,106,.18); transform: translateY(-1px); box-shadow: 0 12px 32px rgba(0,0,0,.2); }
     .card.is-running { border-color: rgba(185,243,106,.21); }
     .card.is-due { border-color: rgba(255,198,110,.36); box-shadow: 0 0 0 1px rgba(255,198,110,.035), 0 10px 30px rgba(0,0,0,.14); }
@@ -140,6 +141,11 @@
     .action-btn.primary { border-color: rgba(185,243,106,.34); background: var(--green); color: #17200e; }
     .action-btn.primary:hover { background: #d1ff92; }
     .action-btn svg { width: 14px; height: 14px; }
+    .card-actions { display: flex; align-items: stretch; gap: 8px; margin-top: 11px; }
+    .card-actions .action-btn { flex: 1; min-width: 0; height: 36px; margin-top: 0; padding: 0 8px; font-size: 9px; }
+    .time-entry-btn { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 6px; min-width: 112px; height: 36px; padding: 0 10px; border: 1px solid rgba(139,224,192,.18); border-radius: 10px; background: rgba(139,224,192,.045); color: #a8c8b7; cursor: pointer; font-size: 9px; font-weight: 700; white-space: nowrap; transition: .18s; }
+    .time-entry-btn:hover { border-color: rgba(139,224,192,.42); background: rgba(139,224,192,.10); color: #d7e8dd; }
+    .time-entry-btn svg { width: 13px; height: 13px; flex: 0 0 13px; }
 
     .empty-state { display: none; grid-column: 1 / -1; min-height: 250px; padding: 40px 20px; border: 1px dashed rgba(190,217,198,.17); border-radius: var(--radius); background: rgba(18,27,27,.43); text-align: center; }
     .empty-state.show { display: grid; place-items: center; }
@@ -180,6 +186,8 @@
     .name-input { width: 100%; height: 43px; padding: 0 12px; outline: none; border: 1px solid rgba(255,255,255,.10); border-radius: 10px; background: #0e1515; color: var(--text); font-size: 12px; }
     .name-input:focus { border-color: rgba(185,243,106,.5); }
     .name-input::placeholder { color: #5e6c65; }
+    .time-modal-hint { margin: 8px 0 0; color: #78867f; font-size: 9px; line-height: 1.5; }
+    .time-error { margin-top: 9px; color: var(--red); font-size: 10px; line-height: 1.4; }
     .modal-license { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; padding: 12px; border: 1px solid rgba(255,255,255,.06); border-radius: 11px; background: rgba(255,255,255,.025); }
     .modal-license strong { display: block; color: #c8d2cc; font-size: 10px; }
     .modal-license small { display: block; margin-top: 3px; color: #77847d; font-size: 9px; }
@@ -224,6 +232,8 @@
       .tool-actions { gap: 6px; }
       .add-btn { font-size: 10px; }
       .card { padding: 13px; }
+      .card-actions { flex-direction: column; }
+      .card-actions .action-btn, .time-entry-btn { width: 100%; }
       .deadline-time { font-size: 22px; }
       .countdown { font-size: 15px; }
     }
@@ -351,6 +361,24 @@
       </div>
     </form>
   </div>
+  <div class="modal-backdrop" id="time-modal" aria-hidden="true">
+    <form class="modal" id="time-form" role="dialog" aria-modal="true" aria-labelledby="time-modal-title">
+      <div class="modal-head">
+        <div><div class="modal-kicker">Таймер крафтера</div><h2 id="time-modal-title">Время посадки</h2></div>
+        <button class="modal-close" type="button" id="time-modal-close" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" fill="none" width="15" height="15"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <label class="field-label" for="boarding-time-input">Дата и время посадки</label>
+      <input class="name-input" id="boarding-time-input" name="boardingTime" type="datetime-local" step="60" required>
+      <p class="time-modal-hint" id="boarding-time-hint">Укажи фактический момент посадки. Время не может быть в будущем.</p>
+      <div class="time-error" id="boarding-time-error" role="alert" hidden></div>
+      <div class="modal-actions">
+        <button class="cancel-btn" type="button" id="time-modal-cancel">Отмена</button>
+        <button class="submit-btn" type="submit">Сохранить время</button>
+      </div>
+    </form>
+  </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
@@ -363,9 +391,15 @@
       const formEl = document.getElementById('add-form');
       const nameInput = document.getElementById('character-name-input');
       const licenseInput = document.getElementById('new-license');
+      const timeModalEl = document.getElementById('time-modal');
+      const timeFormEl = document.getElementById('time-form');
+      const boardingTimeInput = document.getElementById('boarding-time-input');
+      const boardingTimeHint = document.getElementById('boarding-time-hint');
+      const boardingTimeError = document.getElementById('boarding-time-error');
       const toastEl = document.getElementById('toast');
       let filter = 'all';
       let toastTimer;
+      let editingTimeCharacterId = null;
       let characters = loadCharacters();
 
       function normalizeCharacters(parsed) {
@@ -409,6 +443,10 @@
       }
       function timeText(timestamp) {
         return new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(timestamp));
+      }
+      function localDateTimeValue(timestamp) {
+        const localDate = new Date(timestamp - new Date(timestamp).getTimezoneOffset() * 60000);
+        return localDate.toISOString().slice(0, 16);
       }
       function dateText(timestamp) {
         const target = new Date(timestamp);
@@ -517,7 +555,7 @@
         const timerPanelClass = due ? 'timer-panel is-due' : 'timer-panel';
         const countdown = due ? '00:00:00' : running ? durationText(c.endAt - now) : '—';
         const countdownClass = timed ? 'countdown' : 'countdown idle';
-        const footerLeft = timed ? `Старт · ${timeText(c.startedAt)}` : 'Ожидает запуска';
+        const footerLeft = timed ? `Старт · ${timeAndDate(c.startedAt)}` : 'Ожидает запуска';
         const footerRight = timed ? (due ? 'Время смены вышло' : `${Math.floor(progress)}% смены`) : `${hoursFor(c)} ч на продажу`;
         const buttonText = !timed ? 'Начать смену' : due ? 'Пересадил · начать отсчёт' : 'Перезапустить таймер';
         const buttonIcon = !timed
@@ -541,7 +579,13 @@
             <div class="progress-track"><div class="progress-fill" data-progress style="width:${progress.toFixed(2)}%"></div></div>
             <div class="timer-foot"><span data-start-label>${esc(footerLeft)}</span><span data-progress-label>${esc(footerRight)}</span></div>
           </div>
-          <button class="action-btn${!timed || due ? ' primary' : ''}" type="button" data-start="${esc(c.id)}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true">${buttonIcon}</svg>${buttonText}</button>
+          <div class="card-actions">
+            <button class="action-btn${!timed || due ? ' primary' : ''}" type="button" data-start="${esc(c.id)}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true">${buttonIcon}</svg>${buttonText}</button>
+            <button class="time-entry-btn" type="button" data-set-time="${esc(c.id)}" aria-label="${timed ? 'Изменить' : 'Указать'} дату и время посадки для ${esc(c.name)}" title="${timed ? 'Изменить время посадки' : 'Указать время посадки'}">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>${timed ? 'Изменить время' : 'Указать время'}</span>
+            </button>
+          </div>
         </article>`;
       }
       function renderCards() {
@@ -604,7 +648,7 @@
           if (label) label.textContent = due ? 'статус смены' : 'до пересадки';
           if (fill) fill.style.width = `${pct.toFixed(2)}%`;
           if (progressLabel) progressLabel.textContent = due ? 'Время смены вышло' : `${Math.floor(pct)}% смены`;
-          if (started) started.textContent = `Старт · ${timeText(c.startedAt)}`;
+          if (started) started.textContent = `Старт · ${timeAndDate(c.startedAt)}`;
         });
       }
       function openModal() {
@@ -618,6 +662,23 @@
       function closeModal() {
         modalEl.classList.remove('open');
         modalEl.setAttribute('aria-hidden', 'true');
+      }
+      function openTimeModal(character) {
+        if (!character) return;
+        editingTimeCharacterId = character.id;
+        const now = Date.now();
+        boardingTimeInput.value = localDateTimeValue(hasTimer(character) ? character.startedAt : now);
+        boardingTimeError.textContent = '';
+        boardingTimeError.hidden = true;
+        boardingTimeHint.textContent = `Укажи фактическую дату и время посадки. Смена будет рассчитана на ${hoursFor(character)} ч по текущей лицензии. Будущее время указать нельзя.`;
+        timeModalEl.classList.add('open');
+        timeModalEl.setAttribute('aria-hidden', 'false');
+        setTimeout(() => boardingTimeInput.focus(), 30);
+      }
+      function closeTimeModal() {
+        timeModalEl.classList.remove('open');
+        timeModalEl.setAttribute('aria-hidden', 'true');
+        editingTimeCharacterId = null;
       }
       function setupUpdateControls() {
         const checkButton = document.getElementById('check-updates');
@@ -721,7 +782,44 @@
       document.getElementById('modal-close').addEventListener('click', closeModal);
       document.getElementById('modal-cancel').addEventListener('click', closeModal);
       modalEl.addEventListener('click', event => { if (event.target === modalEl) closeModal(); });
-      document.addEventListener('keydown', event => { if (event.key === 'Escape' && modalEl.classList.contains('open')) closeModal(); });
+      document.getElementById('time-modal-close').addEventListener('click', closeTimeModal);
+      document.getElementById('time-modal-cancel').addEventListener('click', closeTimeModal);
+      timeModalEl.addEventListener('click', event => { if (event.target === timeModalEl) closeTimeModal(); });
+      document.addEventListener('keydown', event => {
+        if (event.key !== 'Escape') return;
+        if (timeModalEl.classList.contains('open')) closeTimeModal();
+        else if (modalEl.classList.contains('open')) closeModal();
+      });
+      boardingTimeInput.addEventListener('input', () => {
+        boardingTimeError.textContent = '';
+        boardingTimeError.hidden = true;
+      });
+      timeFormEl.addEventListener('submit', event => {
+        event.preventDefault();
+        const character = characters.find(item => item.id === editingTimeCharacterId);
+        if (!character) { closeTimeModal(); return; }
+        const startedAt = new Date(boardingTimeInput.value).getTime();
+        if (!Number.isFinite(startedAt)) {
+          boardingTimeError.textContent = 'Выбери корректные дату и время.';
+          boardingTimeError.hidden = false;
+          boardingTimeInput.focus();
+          return;
+        }
+        if (startedAt > Date.now()) {
+          boardingTimeError.textContent = 'Время посадки не может быть в будущем.';
+          boardingTimeError.hidden = false;
+          boardingTimeInput.focus();
+          return;
+        }
+        character.shiftHours = hoursFor(character);
+        character.startedAt = startedAt;
+        character.endAt = startedAt + character.shiftHours * 60 * 60 * 1000;
+        saveCharacters();
+        closeTimeModal();
+        renderCards();
+        updateStats();
+        showToast(`Посадка «${character.name}» указана · ${timeAndDate(startedAt)} · ${character.shiftHours} ч`);
+      });
       licenseInput.addEventListener('change', () => { document.getElementById('new-license-label').textContent = licenseInput.checked ? '24 ч' : '12 ч'; });
       formEl.addEventListener('submit', event => {
         event.preventDefault();
@@ -754,6 +852,12 @@
       cardsEl.addEventListener('click', event => {
         const add = event.target.closest('[data-empty-add]');
         if (add) { openModal(); return; }
+        const timeButton = event.target.closest('[data-set-time]');
+        if (timeButton) {
+          const character = characters.find(item => item.id === timeButton.dataset.setTime);
+          openTimeModal(character);
+          return;
+        }
         const removeButton = event.target.closest('[data-remove]');
         if (removeButton) {
           const c = characters.find(item => item.id === removeButton.dataset.remove);
