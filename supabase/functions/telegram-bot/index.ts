@@ -170,6 +170,56 @@ function parseMoscowTime(dateText: string, timeText: string): Date | null {
   return result;
 }
 
+function moscowDateText(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Moscow",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function shiftIsoDate(dateText: string, offsetDays: number): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateText);
+  if (!match) return null;
+  const [, yearText, monthText, dayText] = match;
+  const shifted = new Date(Date.UTC(Number(yearText), Number(monthText) - 1, Number(dayText) + offsetDays));
+  if (!Number.isFinite(shifted.getTime())) return null;
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}-${String(shifted.getUTCDate()).padStart(2, "0")}`;
+}
+
+function parseMoscowDateTimeInput(input: string, now = new Date()): Date | null {
+  const value = input.trim().toLocaleLowerCase("ru-RU").replace(/ё/g, "е").replace(/\s+/g, " ");
+  const today = moscowDateText(now);
+  const timeOnly = /^(?:в\s+)?(\d{1,2}):(\d{2})$/.exec(value);
+  if (timeOnly) {
+    return parseMoscowTime(today, `${timeOnly[1].padStart(2, "0")}:${timeOnly[2]}`);
+  }
+
+  const relative = /^(сегодня|вчера)(?:\s+в)?\s+(\d{1,2}):(\d{2})$/.exec(value);
+  if (relative) {
+    const dateText = shiftIsoDate(today, relative[1] === "вчера" ? -1 : 0);
+    if (!dateText) return null;
+    return parseMoscowTime(dateText, `${relative[2].padStart(2, "0")}:${relative[3]}`);
+  }
+
+  const isoDateTime = /^(\d{4}-\d{2}-\d{2})\s+(?:в\s+)?(\d{1,2}):(\d{2})$/.exec(value);
+  if (isoDateTime) {
+    return parseMoscowTime(isoDateTime[1], `${isoDateTime[2].padStart(2, "0")}:${isoDateTime[3]}`);
+  }
+
+  const russianDateTime = /^(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\s+(?:в\s+)?(\d{1,2}):(\d{2})$/.exec(value);
+  if (russianDateTime) {
+    const year = russianDateTime[3] ?? today.slice(0, 4);
+    const dateText = `${year}-${russianDateTime[2].padStart(2, "0")}-${russianDateTime[1].padStart(2, "0")}`;
+    return parseMoscowTime(dateText, `${russianDateTime[4].padStart(2, "0")}:${russianDateTime[5]}`);
+  }
+
+  return null;
+}
+
 type Character = {
   user_id: string;
   id: string;
@@ -397,7 +447,12 @@ function timerChoiceKeyboard(token: string): TelegramInlineKeyboard {
   return {
     inline_keyboard: [
       [{ text: "⏱ Пересадил сейчас", callback_data: `now:${token}` }],
-      [{ text: "🕰 Пересадил раньше — указать время", callback_data: `past:${token}` }],
+      [
+        { text: "−15 мин", callback_data: `quick15:${token}` },
+        { text: "−30 мин", callback_data: `quick30:${token}` },
+        { text: "−1 час", callback_data: `quick60:${token}` },
+      ],
+      [{ text: "⌨️ Ввести дату/время", callback_data: `past:${token}` }],
       [{ text: "📦 Остановить и отправить на склад", callback_data: `archive:${token}` }],
       [{ text: "← К персонажам", callback_data: "menu:0" }],
     ],
@@ -472,7 +527,7 @@ function helpText(): string {
     "/add Имя — добавить персонажа",
     "/license ID — переключить лицензию",
     "/timer ID — начать смену сейчас",
-    "/settime ID YYYY-MM-DD HH:MM — задать время посадки (Москва)",
+    "/settime ID дата время — сегодня 18:30, вчера 22:15 или 06.10 19:30",
     "/archive ID — остановить таймер и отправить на склад",
     "/restore ID — вернуть персонажа со склада",
     "/delete ID — удалить персонажа",
@@ -513,14 +568,9 @@ async function handlePendingTimerInput(
     return true;
   }
 
-  const match = /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})$/.exec(text.trim());
-  if (!match) {
-    await sendMessage(chatId, "Не понял дату. Отправь её в формате YYYY-MM-DD HH:MM по Москве. Например: 2026-10-06 19:30. Для отмены — /cancel.");
-    return true;
-  }
-  const startedAt = parseMoscowTime(match[1], match[2]);
+  const startedAt = parseMoscowDateTimeInput(text);
   if (!startedAt) {
-    await sendMessage(chatId, "Такой даты или времени нет. Проверь значения и отправь YYYY-MM-DD HH:MM по Москве. Для отмены — /cancel.");
+    await sendMessage(chatId, "Не понял дату/время. Примеры: сегодня 18:30, вчера 22:15, 06.10 19:30 или 06.10.2026 19:30. Для отмены — /cancel.");
     return true;
   }
   if (startedAt.getTime() > Date.now()) {
@@ -664,7 +714,7 @@ async function handleCallback(callback: TelegramCallbackQuery): Promise<void> {
     return;
   }
 
-  const actionMatch = /^(char|now|past|archive|restore):([0-9a-f]{24})$/.exec(data);
+  const actionMatch = /^(char|now|past|archive|restore|quick15|quick30|quick60):([0-9a-f]{24})$/.exec(data);
   if (!actionMatch) {
     await answerCallback(callback.id, "Эта кнопка устарела. Отправь /menu.");
     return;
@@ -751,14 +801,30 @@ async function handleCallback(callback: TelegramCallbackQuery): Promise<void> {
     return;
   }
 
+  const quickMinutes = action === "quick15" ? 15 : action === "quick30" ? 30 : action === "quick60" ? 60 : 0;
+  if (quickMinutes) {
+    await answerCallback(callback.id, `Ставлю время ${quickMinutes} мин назад…`);
+    await removeInlineKeyboard(callback);
+    const startedAt = new Date(Date.now() - quickMinutes * 60 * 1000);
+    const { shiftHours, endsAt } = await persistCharacterTimer(userId, character, startedAt);
+    await sendMessage(
+      chatId,
+      `Готово — смена «${safeText(character.name)}» отмечена как начавшаяся ${quickMinutes} мин назад.\n` +
+        `Посадка: ${formatMoscowFull(startedAt)} по Москве.\n` +
+        `Пересадка: ${formatMoscowFull(endsAt)} по Москве (через ${shiftHours} ч).`,
+    );
+    return;
+  }
+
   await saveTimerInputSession(telegramUserId, chatId, userId, character.id);
   await answerCallback(callback.id, "Жду дату и время.");
   await removeInlineKeyboard(callback);
   await sendMessage(
     chatId,
-    `Для «${safeText(character.name)}» отправь дату и время посадки по Москве в формате YYYY-MM-DD HH:MM.\n` +
-      `Например: 2026-10-06 19:30. Ввод действует 10 минут; для отмены отправь /cancel.`,
-    { force_reply: true, input_field_placeholder: "YYYY-MM-DD HH:MM" },
+    `Для «${safeText(character.name)}» напиши время посадки по Москве. Можно коротко:\n` +
+      `сегодня 18:30\nвчера 22:15\n06.10 19:30\n06.10.2026 19:30\n` +
+      `Также подойдёт YYYY-MM-DD HH:MM. Ввод действует 10 минут; для отмены отправь /cancel.`,
+    { force_reply: true, input_field_placeholder: "сегодня 18:30" },
   );
 }
 
@@ -902,15 +968,14 @@ async function handleMemberCommand(command: string, args: string[], chatId: stri
   }
 
   if (command === "/settime") {
-    const dateText = args[1];
-    const timeText = args[2];
-    if (!dateText || !timeText) {
-      await sendMessage(chatId, "Формат: /settime ID YYYY-MM-DD HH:MM\nНапример: /settime 1 2026-10-05 18:30");
+    const dateTimeInput = args.slice(1).join(" ").trim();
+    if (!dateTimeInput) {
+      await sendMessage(chatId, "Формат: /settime ID время посадки. Примеры: /settime 1 сегодня 18:30 или /settime 1 вчера 22:15.");
       return;
     }
-    const started = parseMoscowTime(dateText, timeText);
+    const started = parseMoscowDateTimeInput(dateTimeInput);
     if (!started) {
-      await sendMessage(chatId, "Не удалось разобрать дату. Используй YYYY-MM-DD HH:MM по Москве.");
+      await sendMessage(chatId, "Не удалось разобрать дату. Примеры: сегодня 18:30, вчера 22:15, 06.10 19:30 или 06.10.2026 19:30.");
       return;
     }
     if (started.getTime() > Date.now()) {
