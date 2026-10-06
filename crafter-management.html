@@ -170,12 +170,12 @@
     .action-btn.primary { border-color: rgba(185,243,106,.34); background: var(--green); color: #17200e; }
     .action-btn.primary:hover { background: #d1ff92; }
     .action-btn svg { width: 14px; height: 14px; }
-    .card-actions { display: flex; align-items: stretch; gap: 8px; margin-top: 11px; }
-    .card-actions .action-btn { flex: 1; min-width: 0; height: 36px; margin-top: 0; padding: 0 8px; font-size: 9px; }
-    .time-entry-btn { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 6px; min-width: 112px; height: 36px; padding: 0 10px; border: 1px solid rgba(139,224,192,.18); border-radius: 10px; background: rgba(139,224,192,.045); color: #a8c8b7; cursor: pointer; font-size: 9px; font-weight: 700; white-space: nowrap; transition: .18s; }
+    .card-actions { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-top: 11px; }
+    .card-actions .action-btn { flex: 1 1 150px; min-width: 135px; height: 40px; margin-top: 0; padding: 0 10px; font-size: 10px; }
+    .time-entry-btn { display: inline-flex; flex: 1 1 120px; align-items: center; justify-content: center; gap: 6px; min-width: 120px; height: 40px; padding: 0 10px; border: 1px solid rgba(139,224,192,.18); border-radius: 10px; background: rgba(139,224,192,.045); color: #a8c8b7; cursor: pointer; font-size: 10px; font-weight: 700; white-space: nowrap; transition: .18s; }
     .time-entry-btn:hover { border-color: rgba(139,224,192,.42); background: rgba(139,224,192,.10); color: #d7e8dd; }
     .time-entry-btn svg { width: 13px; height: 13px; flex: 0 0 13px; }
-    .card-actions .archive-btn { flex: 1 0 100%; border-color: rgba(255,198,110,.18); background: rgba(255,198,110,.045); color: #d6b98b; }
+    .card-actions .archive-btn { flex: 1 0 100%; min-width: 0; width: 100%; border-color: rgba(255,198,110,.18); background: rgba(255,198,110,.045); color: #d6b98b; }
     .card-actions .archive-btn:hover { border-color: rgba(255,198,110,.4); background: rgba(255,198,110,.1); color: #f1d7a8; }
     .storage-card { border-color: rgba(139,224,192,.14); }
     .storage-note { margin-top: 15px; padding: 11px 12px; border: 1px solid rgba(139,224,192,.1); border-radius: 10px; background: rgba(139,224,192,.035); color: #8ea69a; font-size: 10px; line-height: 1.5; }
@@ -267,7 +267,7 @@
       .add-btn { font-size: 10px; }
       .card { padding: 13px; }
       .card-actions { flex-direction: column; }
-      .card-actions .action-btn, .time-entry-btn { width: 100%; }
+      .card-actions .action-btn, .card-actions .time-entry-btn { flex: 0 0 auto; width: 100%; min-width: 0; }
       .deadline-time { font-size: 22px; }
       .countdown { font-size: 15px; }
     }
