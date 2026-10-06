@@ -96,6 +96,7 @@ if (!gotSingleInstanceLock) {
         id: item.id.slice(0, 100),
         name,
         license: Boolean(item.license),
+        hidden: Boolean(item.hidden),
         startedAt,
         endAt,
         shiftHours
@@ -204,7 +205,11 @@ if (!gotSingleInstanceLock) {
       return { supported: false, enabled: false, reason: 'Доступно после сборки Windows-приложения' };
     }
     const state = app.getLoginItemSettings({ path: startupExecutablePath(), args: [] });
-    return { supported: true, enabled: Boolean(state.openAtLogin) };
+    const registered = Boolean(state.openAtLogin);
+    const willLaunch = typeof state.executableWillLaunchAtLogin === 'boolean'
+      ? Boolean(state.executableWillLaunchAtLogin)
+      : registered;
+    return { supported: true, enabled: registered && willLaunch, registered, willLaunch };
   }
 
   ipcMain.handle('startup:get', () => startupState());
@@ -214,7 +219,8 @@ if (!gotSingleInstanceLock) {
       openAtLogin: Boolean(enabled),
       path: startupExecutablePath(),
       args: [],
-      name: APP_ID
+      name: APP_ID,
+      enabled: Boolean(enabled)
     });
     return startupState();
   });

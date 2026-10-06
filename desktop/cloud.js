@@ -24,6 +24,7 @@ function cloneCharacter(record) {
     id: String(record.id),
     name: String(record.name).trim().slice(0, 32),
     license: Boolean(record.license),
+    hidden: Boolean(record.hidden),
     startedAt: Number.isFinite(record.startedAt) ? record.startedAt : null,
     endAt: Number.isFinite(record.endAt) ? record.endAt : null,
     shiftHours: record.shiftHours === 12 || record.shiftHours === 24 ? record.shiftHours : null,
@@ -32,7 +33,7 @@ function cloneCharacter(record) {
 
 function sameCharacter(left, right) {
   return Boolean(left && right) && left.id === right.id && left.name === right.name &&
-    left.license === right.license && left.startedAt === right.startedAt &&
+    left.license === right.license && left.hidden === right.hidden && left.startedAt === right.startedAt &&
     left.endAt === right.endAt && left.shiftHours === right.shiftHours;
 }
 
@@ -171,6 +172,7 @@ function mapCloudCharacter(row) {
     id: String(row.id),
     name: String(row.name),
     license: Boolean(row.license),
+    hidden: Boolean(row.hidden),
     startedAt: row.started_at ? Date.parse(row.started_at) : null,
     endAt: row.end_at ? Date.parse(row.end_at) : null,
     shiftHours: row.shift_hours === 12 || row.shift_hours === 24 ? row.shift_hours : null,
@@ -184,6 +186,7 @@ function toCloudRow(userId, record) {
     id: item.id,
     name: item.name,
     license: item.license,
+    hidden: item.hidden,
     started_at: item.startedAt === null ? null : new Date(item.startedAt).toISOString(),
     end_at: item.endAt === null ? null : new Date(item.endAt).toISOString(),
     shift_hours: item.shiftHours,
@@ -322,7 +325,7 @@ async function loadCloudCharactersInternal() {
 
   const { data, error } = await ensureClient()
     .from('characters')
-    .select('id,name,license,started_at,end_at,shift_hours')
+    .select('id,name,license,hidden,started_at,end_at,shift_hours')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true })
     .order('name', { ascending: true });

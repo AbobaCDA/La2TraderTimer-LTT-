@@ -96,6 +96,7 @@
 
     .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 15px; }
     .filters { display: flex; align-items: center; gap: 5px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: rgba(17,26,27,.8); }
+    .filters[hidden], .warehouse-count[hidden] { display: none !important; }
     .filter-btn { border: 0; padding: 8px 12px; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; font-size: 11px; font-weight: 650; transition: .18s ease; }
     .filter-btn:hover { color: var(--text); }
     .filter-btn.active { color: var(--text); background: #263230; box-shadow: inset 0 0 0 1px rgba(255,255,255,.035); }
@@ -108,6 +109,10 @@
     .add-btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; height: 39px; padding: 0 14px; border: 1px solid rgba(185,243,106,.3); border-radius: 10px; background: var(--green); color: #16200e; font-size: 11px; font-weight: 800; cursor: pointer; box-shadow: 0 5px 20px rgba(139,201,61,.09); transition: .18s ease; white-space: nowrap; }
     .add-btn:hover { background: #cbff82; transform: translateY(-1px); }
     .add-btn svg { width: 15px; height: 15px; }
+    .warehouse-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 39px; padding: 0 11px; border: 1px solid rgba(139,224,192,.2); border-radius: 10px; background: rgba(139,224,192,.055); color: #b7d1c2; cursor: pointer; font-size: 10px; font-weight: 750; white-space: nowrap; transition: .18s; }
+    .warehouse-btn:hover, .warehouse-btn.active { border-color: rgba(139,224,192,.42); background: rgba(139,224,192,.12); color: #e0efe5; }
+    .warehouse-btn svg { width: 15px; height: 15px; flex: 0 0 15px; }
+    .warehouse-count { min-width: 18px; padding: 3px 5px; border-radius: 6px; background: rgba(139,224,192,.12); color: #cce5d7; font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; }
     .list-meta { display: flex; justify-content: space-between; align-items: center; margin: 19px 1px 11px; color: #74817b; font-size: 10px; letter-spacing: .04em; }
     .list-meta strong { color: #bdc9c2; font-weight: 650; }
     .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
@@ -170,6 +175,10 @@
     .time-entry-btn { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 6px; min-width: 112px; height: 36px; padding: 0 10px; border: 1px solid rgba(139,224,192,.18); border-radius: 10px; background: rgba(139,224,192,.045); color: #a8c8b7; cursor: pointer; font-size: 9px; font-weight: 700; white-space: nowrap; transition: .18s; }
     .time-entry-btn:hover { border-color: rgba(139,224,192,.42); background: rgba(139,224,192,.10); color: #d7e8dd; }
     .time-entry-btn svg { width: 13px; height: 13px; flex: 0 0 13px; }
+    .card-actions .archive-btn { flex: 1 0 100%; border-color: rgba(255,198,110,.18); background: rgba(255,198,110,.045); color: #d6b98b; }
+    .card-actions .archive-btn:hover { border-color: rgba(255,198,110,.4); background: rgba(255,198,110,.1); color: #f1d7a8; }
+    .storage-card { border-color: rgba(139,224,192,.14); }
+    .storage-note { margin-top: 15px; padding: 11px 12px; border: 1px solid rgba(139,224,192,.1); border-radius: 10px; background: rgba(139,224,192,.035); color: #8ea69a; font-size: 10px; line-height: 1.5; }
 
     .empty-state { display: none; grid-column: 1 / -1; min-height: 250px; padding: 40px 20px; border: 1px dashed rgba(190,217,198,.17); border-radius: var(--radius); background: rgba(18,27,27,.43); text-align: center; }
     .empty-state.show { display: grid; place-items: center; }
@@ -322,7 +331,7 @@
 
     <section aria-label="Персонажи">
       <div class="toolbar">
-        <div class="filters" role="group" aria-label="Фильтр персонажей">
+        <div class="filters" id="character-filters" role="group" aria-label="Фильтр персонажей">
           <button class="filter-btn active" type="button" data-filter="all">Все <span id="filter-all-count">0</span></button>
           <button class="filter-btn" type="button" data-filter="timed">С таймером <span id="filter-timed-count">0</span></button>
           <button class="filter-btn" type="button" data-filter="waiting">Ожидают <span id="filter-waiting-count">0</span></button>
@@ -332,13 +341,18 @@
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.7" stroke="currentColor" stroke-width="1.7"/><path d="m16 16 4.2 4.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
             <input id="search" type="search" placeholder="Найти персонажа…" autocomplete="off" aria-label="Найти персонажа">
           </label>
+          <button class="warehouse-btn" id="warehouse-toggle" type="button" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8.5h16v11H4zM3 4.5h18v4H3zM9 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 12v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <span id="warehouse-toggle-label">Склад персонажей</span>
+            <span class="warehouse-count" id="warehouse-count">0</span>
+          </button>
           <button class="add-btn" id="add-open" type="button">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             Добавить
           </button>
         </div>
       </div>
-      <div class="list-meta"><span><strong id="visible-count">0 персонажей</strong> · сортировка по ближайшей пересадке</span><span>Изменения сохраняются автоматически</span></div>
+      <div class="list-meta"><span><strong id="visible-count">0 персонажей</strong><span id="list-summary-note"> · сортировка по ближайшей пересадке</span></span><span id="storage-mode-note">Изменения сохраняются автоматически</span></div>
       <div class="cards" id="cards" aria-live="polite"></div>
     </section>
 
@@ -461,6 +475,7 @@
       const boardingTimeError = document.getElementById('boarding-time-error');
       const toastEl = document.getElementById('toast');
       let filter = 'all';
+      let warehouseMode = false;
       let toastTimer;
       let editingTimeCharacterId = null;
       let cloudState = { signedIn: false };
@@ -477,6 +492,7 @@
           id: c.id,
           name: c.name,
           license: Boolean(c.license),
+          hidden: Boolean(c.hidden),
           startedAt: Number.isFinite(c.startedAt) ? c.startedAt : null,
           endAt: Number.isFinite(c.endAt) ? c.endAt : null,
           shiftHours: Number.isFinite(c.shiftHours) ? c.shiftHours : null
@@ -915,6 +931,7 @@
         const footerLeft = timed ? `Старт · ${timeAndDate(c.startedAt)}` : 'Ожидает запуска';
         const footerRight = timed ? (due ? 'Время смены вышло' : `${Math.floor(progress)}% смены`) : `${hoursFor(c)} ч на продажу`;
         const buttonText = !timed ? 'Начать смену' : due ? 'Пересадил · начать отсчёт' : 'Перезапустить таймер';
+        const archiveButtonText = running ? 'Остановить и на склад' : 'Скрыть';
         const buttonIcon = !timed
           ? '<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'
           : '<path d="M20 11a8 8 0 0 0-14.8-4L4 9m0-4v4h4M4 13a8 8 0 0 0 14.8 4L20 15m0 4v-4h-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>';
@@ -942,36 +959,102 @@
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <span>${timed ? 'Изменить время' : 'Указать время'}</span>
             </button>
+            <button class="time-entry-btn archive-btn" type="button" data-archive="${esc(c.id)}" aria-label="${running ? 'Остановить таймер и отправить' : 'Скрыть'} персонажа ${esc(c.name)}" title="${running ? 'Остановить таймер и отправить в склад' : 'Скрыть персонажа в складе'}">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8.5h16v11H4zM3 4.5h18v4H3zM9 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 12v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span>${archiveButtonText}</span>
+            </button>
           </div>
         </article>`;
       }
+      function renderStoredCard(c, index) {
+        return `<article class="card storage-card" data-card="${esc(c.id)}">
+          <div class="card-head">
+            <div class="avatar" aria-hidden="true">${esc(initials(c.name))}</div>
+            <div class="identity"><div class="character-index">НА СКЛАДЕ · ${String(index + 1).padStart(2,'0')}</div><h2 class="character-name" title="${esc(c.name)}">${esc(c.name)}</h2></div>
+            <button class="icon-btn" type="button" data-remove="${esc(c.id)}" aria-label="Удалить ${esc(c.name)}" title="Удалить персонажа"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6.5 7l.8 13h9.4l.8-13M9 7V4h6v3" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div class="license-row${c.license ? ' enabled' : ''}">
+            <div class="license-copy"><span class="license-mark" aria-hidden="true"></span><span><span class="license-label">Торговая лицензия</span><span class="license-sub">${c.license ? 'Включена · смена 24 часа' : 'Нет · смена 12 часов'}</span></span></div>
+          </div>
+          <div class="storage-note">Персонаж скрыт с главного экрана. Таймер остановлен; активные напоминания отменены.</div>
+          <div class="card-actions"><button class="action-btn primary" type="button" data-restore="${esc(c.id)}">Вернуть на главный экран</button></div>
+        </article>`;
+      }
+      function updateWarehouseControl() {
+        const hiddenCount = characters.filter(c => c.hidden).length;
+        const button = document.getElementById('warehouse-toggle');
+        const label = document.getElementById('warehouse-toggle-label');
+        const count = document.getElementById('warehouse-count');
+        const filters = document.getElementById('character-filters');
+        label.textContent = warehouseMode ? 'Главный экран' : 'Склад персонажей';
+        count.textContent = String(hiddenCount);
+        count.hidden = warehouseMode || hiddenCount === 0;
+        button.classList.toggle('active', warehouseMode);
+        button.setAttribute('aria-pressed', String(warehouseMode));
+        filters.hidden = warehouseMode;
+      }
+      function setWarehouseMode(enabled) {
+        warehouseMode = Boolean(enabled);
+        filter = 'all';
+        searchEl.value = '';
+        document.querySelectorAll('.filter-btn').forEach(button => button.classList.toggle('active', button.dataset.filter === filter));
+        updateWarehouseControl();
+        renderCards();
+        updateStats();
+      }
       function renderCards() {
+        updateWarehouseControl();
         const now = Date.now();
         const query = searchEl.value.trim().toLocaleLowerCase('ru-RU');
-        let list = characters.filter(c => c.name.toLocaleLowerCase('ru-RU').includes(query));
-        if (filter === 'timed') list = list.filter(hasTimer);
-        if (filter === 'waiting') list = list.filter(c => !hasTimer(c));
+        const viewCharacters = characters.filter(c => Boolean(c.hidden) === warehouseMode);
+        let list = viewCharacters.filter(c => c.name.toLocaleLowerCase('ru-RU').includes(query));
+        if (!warehouseMode && filter === 'timed') list = list.filter(hasTimer);
+        if (!warehouseMode && filter === 'waiting') list = list.filter(c => !hasTimer(c));
         list = sortCharacters(list, now);
-        const countText = displayNameCount(list.length);
-        document.getElementById('visible-count').textContent = countText;
+        document.getElementById('visible-count').textContent = displayNameCount(list.length);
+        document.getElementById('list-summary-note').textContent = warehouseMode ? ' · таймер остановлен' : ' · сортировка по ближайшей пересадке';
+        document.getElementById('storage-mode-note').textContent = warehouseMode
+          ? 'Верни персонажа, чтобы снова управлять им на главном экране'
+          : 'Изменения сохраняются автоматически';
         if (!list.length) {
-          const emptyTitle = characters.length === 0 ? 'Пока нет крафтеров' : (query ? 'Ничего не найдено' : 'Здесь пока пусто');
-          const emptyText = characters.length === 0 ? 'Добавь персонажей, чтобы отслеживать торговые смены и вовремя пересаживать трейдеров.' : (query ? 'Попробуй изменить запрос или переключить фильтр.' : 'В этом фильтре пока нет персонажей.');
-          const showAdd = characters.length === 0 && !query && filter === 'all';
-          cardsEl.innerHTML = `<div class="empty-state show"><div><div class="empty-icon">◈</div><h2>${emptyTitle}</h2><p>${emptyText}</p>${showAdd ? '<button class="add-btn" type="button" data-empty-add>＋ Добавить персонажа</button>' : ''}</div></div>`;
+          const hiddenCount = characters.filter(c => c.hidden).length;
+          const emptyTitle = warehouseMode
+            ? (query ? 'Ничего не найдено' : 'Склад пуст')
+            : (query ? 'Ничего не найдено' : viewCharacters.length ? 'Здесь пока пусто' : characters.length ? 'Все персонажи на складе' : 'Пока нет крафтеров');
+          const emptyText = warehouseMode
+            ? 'Скрытые персонажи появятся здесь. Их можно будет вернуть на главный экран.'
+            : query
+              ? 'Попробуй изменить запрос или переключить фильтр.'
+              : characters.length === 0
+                ? 'Добавь персонажей, чтобы отслеживать торговые смены и вовремя пересаживать трейдеров.'
+                : hiddenCount > 0
+                  ? 'Чтобы продолжить, верни персонажа из склада или добавь нового.'
+                  : 'В этом фильтре пока нет персонажей.';
+          const showAdd = !warehouseMode && characters.length === 0 && !query && filter === 'all';
+          const showWarehouse = !warehouseMode && !query && hiddenCount > 0 && viewCharacters.length === 0;
+          const actions = showAdd
+            ? '<button class="add-btn" type="button" data-empty-add>＋ Добавить персонажа</button>'
+            : showWarehouse
+              ? '<button class="warehouse-btn" type="button" data-open-warehouse>Открыть склад персонажей</button>'
+              : '';
+          cardsEl.innerHTML = `<div class="empty-state show"><div><div class="empty-icon">◈</div><h2>${emptyTitle}</h2><p>${emptyText}</p>${actions}</div></div>`;
           return;
         }
-        cardsEl.innerHTML = list.map((c, index) => renderCard(c, characters.indexOf(c), now)).join('');
+        cardsEl.innerHTML = list.map((c, index) => warehouseMode
+          ? renderStoredCard(c, index)
+          : renderCard(c, index, now)).join('');
       }
       function updateStats() {
         const now = Date.now();
-        document.getElementById('stat-total').textContent = characters.length;
-        document.getElementById('stat-running').textContent = characters.filter(c => isRunning(c, now)).length;
-        document.getElementById('stat-due').textContent = characters.filter(c => isDue(c, now)).length;
-        document.getElementById('stat-licensed').textContent = characters.filter(c => c.license).length;
-        document.getElementById('filter-all-count').textContent = characters.length;
-        document.getElementById('filter-timed-count').textContent = characters.filter(hasTimer).length;
-        document.getElementById('filter-waiting-count').textContent = characters.filter(c => !hasTimer(c)).length;
+        updateWarehouseControl();
+        const activeCharacters = characters.filter(c => !c.hidden);
+        document.getElementById('stat-total').textContent = activeCharacters.length;
+        document.getElementById('stat-running').textContent = activeCharacters.filter(c => isRunning(c, now)).length;
+        document.getElementById('stat-due').textContent = activeCharacters.filter(c => isDue(c, now)).length;
+        document.getElementById('stat-licensed').textContent = activeCharacters.filter(c => c.license).length;
+        document.getElementById('filter-all-count').textContent = activeCharacters.length;
+        document.getElementById('filter-timed-count').textContent = activeCharacters.filter(hasTimer).length;
+        document.getElementById('filter-waiting-count').textContent = activeCharacters.filter(c => !hasTimer(c)).length;
       }
       function updateHeaderClock() {
         const now = new Date();
@@ -1087,7 +1170,11 @@
             return;
           }
           input.checked = Boolean(result.enabled);
-          status.textContent = result.enabled ? 'Автозапуск включён' : 'Автозапуск выключен';
+          status.textContent = result.enabled
+            ? 'Автозапуск включён'
+            : result.registered && result.willLaunch === false
+              ? 'Запись есть, запуск отключён Windows'
+              : 'Автозапуск выключен';
           control.classList.remove('unavailable');
           input.disabled = false;
         } catch (_) {
@@ -1127,11 +1214,20 @@
         input.disabled = true;
         status.textContent = 'Сохраняю настройку…';
         try {
-          const result = await desktopApi.setStartup(Boolean(input.checked));
+          const requested = Boolean(input.checked);
+          const result = await desktopApi.setStartup(requested);
           input.checked = Boolean(result && result.enabled);
-          status.textContent = input.checked ? 'Автозапуск включён' : 'Автозапуск выключен';
+          status.textContent = input.checked
+            ? 'Автозапуск включён'
+            : result && result.registered && result.willLaunch === false
+              ? 'Запись есть, запуск отключён Windows'
+              : 'Автозапуск выключен';
           if (result && result.supported) document.getElementById('startup-control').classList.remove('unavailable');
-          showToast(input.checked ? 'Приложение будет запускаться с Windows' : 'Автозапуск Windows отключён');
+          showToast(requested && !input.checked
+            ? 'Windows не подтвердил запуск приложения при входе'
+            : input.checked
+              ? 'Приложение будет запускаться при входе в Windows'
+              : 'Автозапуск Windows отключён');
         } catch (_) {
           input.checked = !input.checked;
           status.textContent = 'Не удалось изменить настройку';
@@ -1189,9 +1285,10 @@
         event.preventDefault();
         const name = nameInput.value.trim();
         if (!name) { nameInput.focus(); return; }
-        characters.push({ id: (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`), name, license: licenseInput.checked, startedAt: null, endAt: null, shiftHours: null });
+        characters.push({ id: (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`), name, license: licenseInput.checked, hidden: false, startedAt: null, endAt: null, shiftHours: null });
         saveCharacters();
         closeModal();
+        warehouseMode = false;
         filter = 'all';
         document.querySelectorAll('.filter-btn').forEach(button => button.classList.toggle('active', button.dataset.filter === filter));
         searchEl.value = '';
@@ -1199,6 +1296,7 @@
         showToast(`Персонаж «${name}» добавлен`);
       });
       searchEl.addEventListener('input', renderCards);
+      document.getElementById('warehouse-toggle').addEventListener('click', () => setWarehouseMode(!warehouseMode));
       document.querySelectorAll('.filter-btn').forEach(button => button.addEventListener('click', () => {
         filter = button.dataset.filter;
         document.querySelectorAll('.filter-btn').forEach(item => item.classList.toggle('active', item === button));
@@ -1216,6 +1314,35 @@
       cardsEl.addEventListener('click', event => {
         const add = event.target.closest('[data-empty-add]');
         if (add) { openModal(); return; }
+        const openWarehouse = event.target.closest('[data-open-warehouse]');
+        if (openWarehouse) { setWarehouseMode(true); return; }
+        const restoreButton = event.target.closest('[data-restore]');
+        if (restoreButton) {
+          const c = characters.find(item => item.id === restoreButton.dataset.restore && item.hidden);
+          if (!c) return;
+          c.hidden = false;
+          c.startedAt = null;
+          c.endAt = null;
+          c.shiftHours = null;
+          saveCharacters();
+          updateStats(); renderCards();
+          showToast(`Персонаж «${c.name}» возвращён · таймер можно запустить заново`);
+          return;
+        }
+        const archiveButton = event.target.closest('[data-archive]');
+        if (archiveButton) {
+          const c = characters.find(item => item.id === archiveButton.dataset.archive && !item.hidden);
+          if (!c) return;
+          if (isRunning(c) && !window.confirm(`Остановить таймер «${c.name}» и отправить персонажа на склад? Активные напоминания будут отменены.`)) return;
+          c.hidden = true;
+          c.startedAt = null;
+          c.endAt = null;
+          c.shiftHours = null;
+          saveCharacters();
+          updateStats(); renderCards();
+          showToast(`Персонаж «${c.name}» отправлен на склад`);
+          return;
+        }
         const timeButton = event.target.closest('[data-set-time]');
         if (timeButton) {
           const character = characters.find(item => item.id === timeButton.dataset.setTime);
